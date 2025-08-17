@@ -74,7 +74,7 @@ const paymentTemplates = [
 
 export function PaymentScheduleStep({ data, phases, totalBudget, currency, onUpdate }: PaymentScheduleStepProps) {
   const { toast } = useToast();
-  const [payments, setPayments] = useState<PaymentSchedule[]>(data);
+  const [payments, setPayments] = useState<PaymentSchedule[]>(Array.isArray(data) ? data : []);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newPayment, setNewPayment] = useState<Omit<PaymentSchedule, 'status'>>({
     name: '',
@@ -85,7 +85,7 @@ export function PaymentScheduleStep({ data, phases, totalBudget, currency, onUpd
   });
 
   useEffect(() => {
-    setPayments(data);
+    setPayments(Array.isArray(data) ? data : []);
   }, [data]);
 
   const validatePayment = (payment: Omit<PaymentSchedule, 'status'>): string | null => {

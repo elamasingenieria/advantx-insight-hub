@@ -57,7 +57,7 @@ const teamRoles = [
 export function TeamAssignmentStep({ data, phases, onUpdate }: TeamAssignmentStepProps) {
   const { toast } = useToast();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [assignments, setAssignments] = useState<TeamAssignment[]>(data);
+  const [assignments, setAssignments] = useState<TeamAssignment[]>(Array.isArray(data) ? data : []);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export function TeamAssignmentStep({ data, phases, onUpdate }: TeamAssignmentSte
   }, []);
 
   useEffect(() => {
-    setAssignments(data);
+    setAssignments(Array.isArray(data) ? data : []);
   }, [data]);
 
   const fetchTeamMembers = async () => {

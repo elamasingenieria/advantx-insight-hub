@@ -140,10 +140,15 @@ export default function ProjectGenerator() {
   });
 
   const updateWizardData = (step: string, data: any) => {
-    setWizardData(prev => ({
-      ...prev,
-      [step]: { ...prev[step as keyof ProjectWizardData], ...data }
-    }));
+    setWizardData(prev => {
+      const currentStepData = prev[step as keyof ProjectWizardData];
+      const newData = Array.isArray(data) ? data : (Array.isArray(currentStepData) ? [] : data);
+      
+      return {
+        ...prev,
+        [step]: newData
+      };
+    });
   };
 
   const handleNext = () => {
