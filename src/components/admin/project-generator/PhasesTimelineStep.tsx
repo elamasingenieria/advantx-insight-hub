@@ -129,10 +129,10 @@ const phaseTemplates = {
 };
 
 export function PhasesTimelineStep({ data, projectType, onUpdate }: PhasesTimelineStepProps) {
-  const [phases, setPhases] = useState<Phase[]>(data);
+  const [phases, setPhases] = useState<Phase[]>(Array.isArray(data) ? data : []);
 
   useEffect(() => {
-    setPhases(data);
+    setPhases(Array.isArray(data) ? data : []);
   }, [data]);
 
   const loadTemplate = () => {
@@ -234,8 +234,8 @@ export function PhasesTimelineStep({ data, projectType, onUpdate }: PhasesTimeli
     onUpdate(items);
   };
 
-  const totalDuration = phases.reduce((sum, phase) => sum + phase.duration, 0);
-  const milestoneCount = phases.filter(phase => phase.isPaymentMilestone).length;
+  const totalDuration = Array.isArray(phases) ? phases.reduce((sum, phase) => sum + phase.duration, 0) : 0;
+  const milestoneCount = Array.isArray(phases) ? phases.filter(phase => phase.isPaymentMilestone).length : 0;
 
   return (
     <div className="space-y-6">
@@ -302,7 +302,7 @@ export function PhasesTimelineStep({ data, projectType, onUpdate }: PhasesTimeli
         <Droppable droppableId="phases">
           {(provided) => (
             <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
-              {phases.map((phase, index) => (
+              {Array.isArray(phases) && phases.map((phase, index) => (
                 <Draggable key={phase.id} draggableId={phase.id} index={index}>
                   {(provided) => (
                     <Card
@@ -478,7 +478,7 @@ export function PhasesTimelineStep({ data, projectType, onUpdate }: PhasesTimeli
         </Droppable>
       </DragDropContext>
 
-      {phases.length === 0 && (
+      {(!Array.isArray(phases) || phases.length === 0) && (
         <Card>
           <CardContent className="text-center py-12">
             <CheckCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
