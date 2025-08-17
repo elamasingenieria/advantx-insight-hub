@@ -23,7 +23,8 @@ interface Phase {
   id: string;
   name: string;
   isPaymentMilestone: boolean;
-  duration: number;
+  start_date: Date | null;
+  end_date: Date | null;
 }
 
 interface PaymentScheduleStepProps {
@@ -78,8 +79,7 @@ export function PaymentScheduleStep({ data, phases, totalBudget, currency, onUpd
     const milestonePhases = phases.filter(phase => phase.isPaymentMilestone);
     
     let startDate = new Date();
-    let cumulativeWeeks = 0;
-
+    
     const newPayments: PaymentMilestone[] = template.schedule.map((item, index) => {
       const amount = Math.round((totalBudget * item.percentage) / 100);
       
@@ -87,11 +87,16 @@ export function PaymentScheduleStep({ data, phases, totalBudget, currency, onUpd
       let dueDate = startDate;
       if (index < milestonePhases.length) {
         const phase = milestonePhases[index];
-        cumulativeWeeks += phase.duration;
-        dueDate = addWeeks(startDate, cumulativeWeeks);
+        // Use phase end_date if available, otherwise space evenly
+        if (phase.end_date) {
+          dueDate = new Date(phase.end_date);
+        } else {
+          // Fallback: space payments 2 weeks apart
+          dueDate = addWeeks(startDate, (index + 1) * 2);
+        }
       } else {
         // If more payments than milestone phases, space them evenly
-        dueDate = addWeeks(startDate, cumulativeWeeks + (index * 2));
+        dueDate = addWeeks(startDate, (index + 1) * 2);
       }
 
       return {

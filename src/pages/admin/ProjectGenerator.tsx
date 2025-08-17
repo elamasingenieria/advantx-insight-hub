@@ -29,8 +29,11 @@ interface ProjectWizardData {
     id: string;
     name: string;
     description: string;
-    duration: number;
-    dependencies: string[];
+    start_date: Date | null;
+    end_date: Date | null;
+    order_index: number;
+    status: 'not_started' | 'in_progress' | 'completed' | 'on_hold';
+    progress_percentage: number;
     isPaymentMilestone: boolean;
     tasks: Array<{
       title: string;
@@ -181,6 +184,7 @@ export default function ProjectGenerator() {
           <PhasesTimelineStep
             data={wizardData.phases}
             projectType={wizardData.projectInfo.projectType}
+            projectStartDate={wizardData.projectInfo.startDate}
             onUpdate={(data) => updateWizardData('phases', data)}
           />
         );

@@ -6,15 +6,24 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Trash2, GripVertical, Clock, DollarSign, CheckCircle } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Plus, Trash2, GripVertical, Clock, DollarSign, CheckCircle, CalendarIcon, Edit } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { format, addWeeks } from 'date-fns';
 
+// Updated Phase interface to match database schema
 interface Phase {
   id: string;
   name: string;
   description: string;
-  duration: number;
-  dependencies: string[];
+  start_date: Date | null;
+  end_date: Date | null;
+  order_index: number;
+  status: 'not_started' | 'in_progress' | 'completed' | 'on_hold';
+  progress_percentage: number;
   isPaymentMilestone: boolean;
   tasks: Array<{
     title: string;
@@ -27,6 +36,7 @@ interface Phase {
 interface PhasesTimelineStepProps {
   data: Phase[];
   projectType: string;
+  projectStartDate?: Date;
   onUpdate: (data: Phase[]) => void;
 }
 
@@ -35,7 +45,8 @@ const phaseTemplates = {
     {
       name: 'Discovery & Planning',
       description: 'Requirements gathering, research, and project planning',
-      duration: 2,
+      duration: 2, // weeks
+      isPaymentMilestone: false,
       tasks: [
         { title: 'Stakeholder interviews', description: 'Conduct interviews with key stakeholders', estimatedHours: 16, priority: 'high' as const },
         { title: 'Technical requirements analysis', description: 'Define technical specifications', estimatedHours: 24, priority: 'high' as const },
@@ -46,6 +57,7 @@ const phaseTemplates = {
       name: 'Design & Prototyping',
       description: 'UI/UX design, wireframing, and prototyping',
       duration: 3,
+      isPaymentMilestone: false,
       tasks: [
         { title: 'Wireframe creation', description: 'Design user interface wireframes', estimatedHours: 32, priority: 'high' as const },
         { title: 'UI/UX design', description: 'Create visual designs and user experience flows', estimatedHours: 48, priority: 'high' as const },
@@ -67,6 +79,7 @@ const phaseTemplates = {
       name: 'Testing & QA',
       description: 'Quality assurance, testing, and bug fixes',
       duration: 2,
+      isPaymentMilestone: false,
       tasks: [
         { title: 'Automated testing', description: 'Implement unit and integration tests', estimatedHours: 32, priority: 'high' as const },
         { title: 'Manual testing', description: 'Comprehensive manual testing of all features', estimatedHours: 24, priority: 'medium' as const },
@@ -90,6 +103,7 @@ const phaseTemplates = {
       name: 'Discovery & Research',
       description: 'Market research, user personas, and requirements',
       duration: 2,
+      isPaymentMilestone: false,
       tasks: [
         { title: 'Market analysis', description: 'Analyze competitor apps and market trends', estimatedHours: 20, priority: 'high' as const },
         { title: 'User persona development', description: 'Create detailed user personas', estimatedHours: 16, priority: 'medium' as const },
@@ -109,6 +123,7 @@ const phaseTemplates = {
       name: 'Development',
       description: 'Native or cross-platform app development',
       duration: 10,
+      isPaymentMilestone: false,
       tasks: [
         { title: 'App development', description: 'Implement core app functionality', estimatedHours: 160, priority: 'high' as const },
         { title: 'API integration', description: 'Integrate with backend APIs and services', estimatedHours: 40, priority: 'high' as const },
@@ -125,11 +140,18 @@ const phaseTemplates = {
       ]
     }
   ],
-  // Add more templates...
 };
 
-export function PhasesTimelineStep({ data, projectType, onUpdate }: PhasesTimelineStepProps) {
+export function PhasesTimelineStep({ data, projectType, projectStartDate, onUpdate }: PhasesTimelineStepProps) {
   const [phases, setPhases] = useState<Phase[]>(Array.isArray(data) ? data : []);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newPhase, setNewPhase] = useState({
+    name: '',
+    description: '',
+    start_date: null as Date | null,
+    end_date: null as Date | null,
+    isPaymentMilestone: false
+  });
 
   useEffect(() => {
     setPhases(Array.isArray(data) ? data : []);
@@ -138,33 +160,65 @@ export function PhasesTimelineStep({ data, projectType, onUpdate }: PhasesTimeli
   const loadTemplate = () => {
     const template = phaseTemplates[projectType as keyof typeof phaseTemplates];
     if (template) {
-      const templatePhases: Phase[] = template.map((phase, index) => ({
-        id: `phase-${Date.now()}-${index}`,
-        name: phase.name,
-        description: phase.description,
-        duration: phase.duration,
-        dependencies: [],
-        isPaymentMilestone: phase.isPaymentMilestone || false,
-        tasks: phase.tasks || []
-      }));
+      let currentStartDate = projectStartDate || new Date();
+      
+      const templatePhases: Phase[] = template.map((phase, index) => {
+        const startDate = new Date(currentStartDate);
+        const endDate = addWeeks(startDate, phase.duration);
+        
+        // Update currentStartDate for next phase
+        currentStartDate = new Date(endDate);
+        
+        return {
+          id: `phase-${Date.now()}-${index}`,
+          name: phase.name,
+          description: phase.description,
+          start_date: startDate,
+          end_date: endDate,
+          order_index: index,
+          status: 'not_started' as const,
+          progress_percentage: 0,
+          isPaymentMilestone: phase.isPaymentMilestone || false,
+          tasks: phase.tasks || []
+        };
+      });
+      
       setPhases(templatePhases);
       onUpdate(templatePhases);
     }
   };
 
   const addPhase = () => {
-    const newPhase: Phase = {
+    if (!newPhase.name.trim()) {
+      return;
+    }
+
+    const newPhaseData: Phase = {
       id: `phase-${Date.now()}`,
-      name: '',
-      description: '',
-      duration: 1,
-      dependencies: [],
-      isPaymentMilestone: false,
+      name: newPhase.name.trim(),
+      description: newPhase.description.trim(),
+      start_date: newPhase.start_date,
+      end_date: newPhase.end_date,
+      order_index: phases.length,
+      status: 'not_started',
+      progress_percentage: 0,
+      isPaymentMilestone: newPhase.isPaymentMilestone,
       tasks: []
     };
-    const updatedPhases = [...phases, newPhase];
+
+    const updatedPhases = [...phases, newPhaseData];
     setPhases(updatedPhases);
     onUpdate(updatedPhases);
+    
+    // Reset form
+    setNewPhase({
+      name: '',
+      description: '',
+      start_date: null,
+      end_date: null,
+      isPaymentMilestone: false
+    });
+    setIsAddDialogOpen(false);
   };
 
   const updatePhase = (id: string, updates: Partial<Phase>) => {
@@ -176,7 +230,8 @@ export function PhasesTimelineStep({ data, projectType, onUpdate }: PhasesTimeli
   };
 
   const removePhase = (id: string) => {
-    const updatedPhases = phases.filter(phase => phase.id !== id);
+    const updatedPhases = phases.filter(phase => phase.id !== id)
+      .map((phase, index) => ({ ...phase, order_index: index })); // Reorder indices
     setPhases(updatedPhases);
     onUpdate(updatedPhases);
   };
@@ -230,12 +285,26 @@ export function PhasesTimelineStep({ data, projectType, onUpdate }: PhasesTimeli
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
 
-    setPhases(items);
-    onUpdate(items);
+    // Update order indices
+    const reorderedItems = items.map((item, index) => ({
+      ...item,
+      order_index: index
+    }));
+
+    setPhases(reorderedItems);
+    onUpdate(reorderedItems);
   };
 
-  const totalDuration = Array.isArray(phases) ? phases.reduce((sum, phase) => sum + phase.duration, 0) : 0;
-  const milestoneCount = Array.isArray(phases) ? phases.filter(phase => phase.isPaymentMilestone).length : 0;
+  const totalDuration = phases.reduce((sum, phase) => {
+    if (phase.start_date && phase.end_date) {
+      const diffTime = phase.end_date.getTime() - phase.start_date.getTime();
+      const diffWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
+      return sum + diffWeeks;
+    }
+    return sum;
+  }, 0);
+
+  const milestoneCount = phases.filter(phase => phase.isPaymentMilestone).length;
 
   return (
     <div className="space-y-6">
@@ -253,10 +322,110 @@ export function PhasesTimelineStep({ data, projectType, onUpdate }: PhasesTimeli
               Load {projectType} Template
             </Button>
           )}
-          <Button onClick={addPhase}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Phase
-          </Button>
+          
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Phase
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Add New Phase</DialogTitle>
+                <DialogDescription>
+                  Create a new project phase with timeline and details.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div>
+                  <Label htmlFor="phase-name">Phase Name *</Label>
+                  <Input
+                    id="phase-name"
+                    value={newPhase.name}
+                    onChange={(e) => setNewPhase({ ...newPhase, name: e.target.value })}
+                    placeholder="e.g., Discovery & Planning"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="phase-description">Description</Label>
+                  <Textarea
+                    id="phase-description"
+                    value={newPhase.description}
+                    onChange={(e) => setNewPhase({ ...newPhase, description: e.target.value })}
+                    placeholder="Brief description of this phase..."
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Start Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-left font-normal"
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {newPhase.start_date ? format(newPhase.start_date, "MMM d, yyyy") : "Select date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={newPhase.start_date}
+                          onSelect={(date) => setNewPhase({ ...newPhase, start_date: date })}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  <div>
+                    <Label>End Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-left font-normal"
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {newPhase.end_date ? format(newPhase.end_date, "MMM d, yyyy") : "Select date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={newPhase.end_date}
+                          onSelect={(date) => setNewPhase({ ...newPhase, end_date: date })}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={newPhase.isPaymentMilestone}
+                    onCheckedChange={(checked) => setNewPhase({ ...newPhase, isPaymentMilestone: checked })}
+                  />
+                  <Label>This phase is a payment milestone</Label>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={addPhase} disabled={!newPhase.name.trim()}>
+                  Add Phase
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -302,7 +471,7 @@ export function PhasesTimelineStep({ data, projectType, onUpdate }: PhasesTimeli
         <Droppable droppableId="phases">
           {(provided) => (
             <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
-              {Array.isArray(phases) && phases.map((phase, index) => (
+              {phases.map((phase, index) => (
                 <Draggable key={phase.id} draggableId={phase.id} index={index}>
                   {(provided) => (
                     <Card
@@ -319,10 +488,17 @@ export function PhasesTimelineStep({ data, projectType, onUpdate }: PhasesTimeli
                           <div className="flex-1 space-y-4">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <Badge variant="outline">Phase {index + 1}</Badge>
+                                <Badge variant="outline">Phase {phase.order_index + 1}</Badge>
                                 {phase.isPaymentMilestone && (
                                   <Badge variant="default">Payment Milestone</Badge>
                                 )}
+                                <Badge variant={
+                                  phase.status === 'completed' ? 'default' :
+                                  phase.status === 'in_progress' ? 'secondary' :
+                                  phase.status === 'on_hold' ? 'destructive' : 'outline'
+                                }>
+                                  {phase.status.replace('_', ' ')}
+                                </Badge>
                               </div>
                               <Button
                                 variant="ghost"
@@ -344,13 +520,69 @@ export function PhasesTimelineStep({ data, projectType, onUpdate }: PhasesTimeli
                                 />
                               </div>
                               <div>
-                                <Label>Duration (weeks)</Label>
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  value={phase.duration}
-                                  onChange={(e) => updatePhase(phase.id, { duration: parseInt(e.target.value) || 1 })}
-                                />
+                                <Label>Status</Label>
+                                <Select
+                                  value={phase.status}
+                                  onValueChange={(value: any) => updatePhase(phase.id, { status: value })}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="not_started">Not Started</SelectItem>
+                                    <SelectItem value="in_progress">In Progress</SelectItem>
+                                    <SelectItem value="completed">Completed</SelectItem>
+                                    <SelectItem value="on_hold">On Hold</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <Label>Start Date</Label>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      className="w-full justify-start text-left font-normal"
+                                    >
+                                      <CalendarIcon className="mr-2 h-4 w-4" />
+                                      {phase.start_date ? format(phase.start_date, "MMM d, yyyy") : "Select date"}
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0">
+                                    <Calendar
+                                      mode="single"
+                                      selected={phase.start_date}
+                                      onSelect={(date) => updatePhase(phase.id, { start_date: date })}
+                                      initialFocus
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                              </div>
+
+                              <div>
+                                <Label>End Date</Label>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      className="w-full justify-start text-left font-normal"
+                                    >
+                                      <CalendarIcon className="mr-2 h-4 w-4" />
+                                      {phase.end_date ? format(phase.end_date, "MMM d, yyyy") : "Select date"}
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0">
+                                    <Calendar
+                                      mode="single"
+                                      selected={phase.end_date}
+                                      onSelect={(date) => updatePhase(phase.id, { end_date: date })}
+                                      initialFocus
+                                    />
+                                  </PopoverContent>
+                                </Popover>
                               </div>
                             </div>
 
@@ -418,49 +650,52 @@ export function PhasesTimelineStep({ data, projectType, onUpdate }: PhasesTimeli
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
                                   </div>
-                                  
-                                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <div>
                                       <Label>Task Title</Label>
                                       <Input
                                         value={task.title}
                                         onChange={(e) => updateTask(phase.id, taskIndex, { title: e.target.value })}
-                                        placeholder="Task name..."
+                                        placeholder="Task name"
                                       />
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <div>
-                                        <Label>Hours</Label>
-                                        <Input
-                                          type="number"
-                                          min="1"
-                                          value={task.estimatedHours}
-                                          onChange={(e) => updateTask(phase.id, taskIndex, { estimatedHours: parseInt(e.target.value) || 1 })}
-                                        />
-                                      </div>
-                                      <div>
-                                        <Label>Priority</Label>
-                                        <select
-                                          value={task.priority}
-                                          onChange={(e) => updateTask(phase.id, taskIndex, { priority: e.target.value })}
-                                          className="w-full p-2 border border-input rounded-md bg-background"
-                                        >
-                                          <option value="low">Low</option>
-                                          <option value="medium">Medium</option>
-                                          <option value="high">High</option>
-                                        </select>
-                                      </div>
+                                    <div>
+                                      <Label>Estimated Hours</Label>
+                                      <Input
+                                        type="number"
+                                        min="1"
+                                        value={task.estimatedHours}
+                                        onChange={(e) => updateTask(phase.id, taskIndex, { estimatedHours: parseInt(e.target.value) || 1 })}
+                                      />
                                     </div>
                                   </div>
-                                  
+
                                   <div>
-                                    <Label>Description</Label>
+                                    <Label>Task Description</Label>
                                     <Textarea
                                       value={task.description}
                                       onChange={(e) => updateTask(phase.id, taskIndex, { description: e.target.value })}
                                       placeholder="Task description..."
                                       rows={2}
                                     />
+                                  </div>
+
+                                  <div>
+                                    <Label>Priority</Label>
+                                    <Select
+                                      value={task.priority}
+                                      onValueChange={(value: 'low' | 'medium' | 'high') => updateTask(phase.id, taskIndex, { priority: value })}
+                                    >
+                                      <SelectTrigger className="w-full">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="low">Low Priority</SelectItem>
+                                        <SelectItem value="medium">Medium Priority</SelectItem>
+                                        <SelectItem value="high">High Priority</SelectItem>
+                                      </SelectContent>
+                                    </Select>
                                   </div>
                                 </div>
                               ))}
@@ -478,15 +713,15 @@ export function PhasesTimelineStep({ data, projectType, onUpdate }: PhasesTimeli
         </Droppable>
       </DragDropContext>
 
-      {(!Array.isArray(phases) || phases.length === 0) && (
+      {phases.length === 0 && (
         <Card>
           <CardContent className="text-center py-12">
             <CheckCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">No Phases Added</h3>
             <p className="text-muted-foreground mb-4">
-              Add project phases to structure your workflow and timeline.
+              Add project phases to define your timeline and milestones.
             </p>
-            <Button onClick={addPhase}>
+            <Button onClick={() => setIsAddDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add First Phase
             </Button>
