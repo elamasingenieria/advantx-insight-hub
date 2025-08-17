@@ -11,8 +11,8 @@ import { ProgressTracker } from '@/components/ProgressTracker';
 import { Link } from 'react-router-dom';
 import { syncMissingProfiles } from '@/utils/profileSync';
 import { useToast } from '@/hooks/use-toast';
+import { SettingsDropdown } from '@/components/SettingsDropdown';
 import { 
-  LogOut, 
   User, 
   Building, 
   Mail, 
@@ -173,18 +173,7 @@ export function Dashboard() {
                   <Button variant="ghost" size="icon">
                     <Bell className="w-4 h-4" />
                   </Button>
-                  <Button variant="ghost" size="icon">
-                    <Settings className="w-4 h-4" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={signOut}
-                    className="ml-2"
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sign Out
-                  </Button>
+                  <SettingsDropdown />
                 </div>
               )}
             </div>

@@ -12,6 +12,7 @@ import ProjectGenerator from "./pages/admin/ProjectGenerator";
 import ProjectCreation from "./pages/admin/ProjectCreation";
 import ProjectSetup from "./pages/admin/ProjectSetup";
 import ProjectList from "./pages/admin/ProjectList";
+import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -71,6 +72,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <ProjectList />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/help" 
+              element={
+                <ProtectedRoute>
+                  <Help />
                 </ProtectedRoute>
               } 
             />
