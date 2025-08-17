@@ -27,11 +27,7 @@ export default function Auth() {
   const [signUpFullName, setSignUpFullName] = useState('');
   const [signUpRole, setSignUpRole] = useState('client');
 
-  useEffect(() => {
-    if (user) {
-      <Navigate to={from} replace />;
-    }
-  }, [user, from]);
+  // Navigation is handled in the render logic below
 
   if (loading) {
     return (
