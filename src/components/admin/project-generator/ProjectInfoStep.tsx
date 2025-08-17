@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,19 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Plus, User } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { ClientSelector } from './ClientSelector';
 
 interface ProjectInfoData {
   clientId?: string;
-  newClient?: {
-    name: string;
-    company: string;
-    email: string;
-    phone?: string;
-  };
   projectName: string;
   description: string;
   projectType: string;
@@ -55,35 +47,6 @@ const projectSizes = [
 const currencies = ['USD', 'EUR', 'GBP', 'CAD', 'AUD'];
 
 export function ProjectInfoStep({ data, onUpdate }: ProjectInfoStepProps) {
-  const { toast } = useToast();
-  const [clients, setClients] = useState<any[]>([]);
-  const [showNewClientForm, setShowNewClientForm] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchClients();
-  }, []);
-
-  const fetchClients = async () => {
-    try {
-      const { data: clientsData, error } = await supabase
-        .from('clients')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
-      setClients(clientsData || []);
-    } catch (error) {
-      console.error('Error fetching clients:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load clients.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleProjectSizeChange = (size: string) => {
     const sizeConfig = projectSizes.find(s => s.value === size);
@@ -93,122 +56,18 @@ export function ProjectInfoStep({ data, onUpdate }: ProjectInfoStepProps) {
     });
   };
 
+  const handleClientSelect = (clientId: string) => {
+    onUpdate({ clientId });
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Client Selection */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Client Information</CardTitle>
-            <CardDescription>
-              Select an existing client or create a new one
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {!showNewClientForm ? (
-              <>
-                <div>
-                  <Label htmlFor="client-select">Select Client</Label>
-                  <Select
-                    value={data.clientId || ''}
-                    onValueChange={(value) => onUpdate({ clientId: value, newClient: undefined })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a client..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4" />
-                            <div>
-                              <div className="font-medium">{client.name}</div>
-                              <div className="text-sm text-muted-foreground">{client.company}</div>
-                            </div>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowNewClientForm(true)}
-                  className="w-full"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create New Client
-                </Button>
-              </>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-medium">New Client Details</Label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowNewClientForm(false)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="client-name">Client Name *</Label>
-                    <Input
-                      id="client-name"
-                      value={data.newClient?.name || ''}
-                      onChange={(e) => onUpdate({
-                        newClient: { ...data.newClient, name: e.target.value }
-                      })}
-                      placeholder="John Doe"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="client-company">Company *</Label>
-                    <Input
-                      id="client-company"
-                      value={data.newClient?.company || ''}
-                      onChange={(e) => onUpdate({
-                        newClient: { ...data.newClient, company: e.target.value }
-                      })}
-                      placeholder="ACME Corp"
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="client-email">Email *</Label>
-                    <Input
-                      id="client-email"
-                      type="email"
-                      value={data.newClient?.email || ''}
-                      onChange={(e) => onUpdate({
-                        newClient: { ...data.newClient, email: e.target.value }
-                      })}
-                      placeholder="john@acme.com"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="client-phone">Phone</Label>
-                    <Input
-                      id="client-phone"
-                      value={data.newClient?.phone || ''}
-                      onChange={(e) => onUpdate({
-                        newClient: { ...data.newClient, phone: e.target.value }
-                      })}
-                      placeholder="+1 (555) 123-4567"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <ClientSelector
+          selectedClientId={data.clientId}
+          onClientSelect={handleClientSelect}
+        />
 
         {/* Project Details */}
         <Card>

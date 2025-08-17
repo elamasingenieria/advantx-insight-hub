@@ -16,12 +16,6 @@ import { supabase } from '@/integrations/supabase/client';
 interface ProjectWizardData {
   projectInfo: {
     clientId?: string;
-    newClient?: {
-      name: string;
-      company: string;
-      email: string;
-      phone?: string;
-    };
     projectName: string;
     description: string;
     projectType: string;
