@@ -55,31 +55,14 @@ serve(async (req) => {
       }
     );
 
-    // Start transaction-like operations
-    let clientId = wizardData.projectInfo.clientId;
-
-    // Create new client if needed
-    if (!clientId && wizardData.projectInfo.newClient) {
-      const { data: newClient, error: clientError } = await supabaseService
-        .from('clients')
-        .insert({
-          name: wizardData.projectInfo.newClient.name,
-          company: wizardData.projectInfo.newClient.company,
-          contact_email: wizardData.projectInfo.newClient.email,
-          phone: wizardData.projectInfo.newClient.phone,
-        })
-        .select()
-        .single();
-
-      if (clientError) throw clientError;
-      clientId = newClient.id;
-    }
+    // Get client ID from wizard data
+    const clientId = wizardData.projectInfo.clientId;
 
     if (!clientId) {
-      throw new Error("No client specified");
+      throw new Error("Client must be selected");
     }
 
-    // Create project
+    // Create project with proper field mapping
     const { data: project, error: projectError } = await supabaseService
       .from('projects')
       .insert({
@@ -91,6 +74,8 @@ serve(async (req) => {
         total_amount: wizardData.projectInfo.totalBudget,
         status: 'planning',
         progress_percentage: 0,
+        monthly_savings: 0,
+        annual_roi_percentage: 0,
       })
       .select()
       .single();
