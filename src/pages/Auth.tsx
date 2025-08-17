@@ -10,7 +10,7 @@ import { Loader2, Zap, TrendingUp, Shield, Users } from 'lucide-react';
 export default function Auth() {
   const { user, loading, signIn } = useAuth();
   const location = useLocation();
-  const from = location.state?.from?.pathname || '/';
+  const from = location.state?.from?.pathname || '/dashboard';
 
   const [isLoading, setIsLoading] = useState(false);
 
