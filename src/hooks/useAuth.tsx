@@ -19,7 +19,6 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, fullName: string, role?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -133,49 +132,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string, role: string = 'client') => {
-    try {
-      setLoading(true);
-      const redirectUrl = `${window.location.origin}/`;
-      
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            full_name: fullName,
-            role: role,
-          }
-        }
-      });
-
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Sign Up Failed", 
-          description: error.message,
-        });
-      } else {
-        toast({
-          title: "Account Created!",
-          description: "Please check your email to confirm your account.",
-        });
-      }
-
-      return { error };
-    } catch (error: any) {
-      const errorMessage = error?.message || 'An unexpected error occurred';
-      toast({
-        variant: "destructive",
-        title: "Sign Up Failed",
-        description: errorMessage,
-      });
-      return { error };
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const signOut = async () => {
     try {
@@ -199,7 +155,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       profile,
       loading,
       signIn,
-      signUp,
       signOut,
       refreshProfile,
     }}>

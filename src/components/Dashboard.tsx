@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { ROISummaryCard } from '@/components/ROISummaryCard';
 import { ProgressTracker } from '@/components/ProgressTracker';
+import { Link } from 'react-router-dom';
 import { 
   LogOut, 
   User, 
@@ -17,7 +18,8 @@ import {
   BookOpen,
   CreditCard,
   Bell,
-  Settings
+  Settings,
+  Shield
 } from 'lucide-react';
 
 // Mock data - in real app this would come from Supabase
@@ -126,6 +128,13 @@ export function Dashboard() {
                       {profile.role.replace('_', ' ')}
                     </Badge>
                   </div>
+                  {profile.role === 'admin' && (
+                    <Link to="/admin/users">
+                      <Button variant="ghost" size="icon" title="User Management">
+                        <Shield className="w-4 h-4" />
+                      </Button>
+                    </Link>
+                  )}
                   <Button variant="ghost" size="icon">
                     <Bell className="w-4 h-4" />
                   </Button>
