@@ -2,23 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle2, Clock, AlertTriangle, Pause } from 'lucide-react';
-
-interface Phase {
-  id: string;
-  name: string;
-  progress: number;
-  status: 'not_started' | 'in_progress' | 'completed' | 'blocked';
-  startDate?: Date;
-  endDate?: Date;
-}
-
-interface Project {
-  id: string;
-  name: string;
-  overallProgress: number;
-  status: 'planning' | 'active' | 'on_hold' | 'completed' | 'cancelled';
-  phases: Phase[];
-}
+import type { Project } from '@/hooks/useProjects';
 
 interface ProgressTrackerProps {
   project: Project;
@@ -83,16 +67,16 @@ export function ProgressTracker({ project }: ProgressTrackerProps) {
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">Overall Progress</span>
-            <span className="text-sm font-semibold">{project.overallProgress}%</span>
+            <span className="text-sm font-semibold">{project.progress_percentage}%</span>
           </div>
           <div className="relative">
             <Progress 
-              value={project.overallProgress} 
+              value={project.progress_percentage} 
               className="h-3"
             />
             <div 
               className="absolute top-0 left-0 h-3 rounded-full bg-gradient-primary transition-all duration-300"
-              style={{ width: `${project.overallProgress}%` }}
+              style={{ width: `${project.progress_percentage}%` }}
             />
           </div>
         </div>
@@ -103,70 +87,79 @@ export function ProgressTracker({ project }: ProgressTrackerProps) {
         
         {/* Phases List */}
         <div className="space-y-3">
-          {project.phases.map((phase, index) => (
-            <div key={phase.id} className="relative">
-              {/* Connector Line */}
-              {index < project.phases.length - 1 && (
-                <div className="absolute left-4 top-8 w-0.5 h-6 bg-border z-0" />
-              )}
-              
-              <div className="flex items-start gap-3 relative z-10">
-                {/* Status Icon */}
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${getStatusColor(phase.status)} shadow-sm`}>
-                  {getStatusIcon(phase.status)}
-                </div>
+          {project.phases && project.phases.length > 0 ? (
+            project.phases.map((phase, index) => (
+              <div key={phase.id} className="relative">
+                {/* Connector Line */}
+                {index < project.phases!.length - 1 && (
+                  <div className="absolute left-4 top-8 w-0.5 h-6 bg-border z-0" />
+                )}
                 
-                {/* Phase Details */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-2">
-                    <h5 className="font-medium text-sm truncate">{phase.name}</h5>
-                    <span className="text-xs text-muted-foreground ml-2">{phase.progress}%</span>
+                <div className="flex items-start gap-3 relative z-10">
+                  {/* Status Icon */}
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${getStatusColor(phase.status)} shadow-sm`}>
+                    {getStatusIcon(phase.status)}
                   </div>
                   
-                  {/* Progress Bar */}
-                  <div className="relative mb-2">
-                    <Progress 
-                      value={phase.progress} 
-                      className="h-2"
-                    />
-                    <div 
-                      className={`absolute top-0 left-0 h-2 rounded-full transition-all duration-300 ${getProgressColor(phase.status)}`}
-                      style={{ width: `${phase.progress}%` }}
-                    />
-                  </div>
-                  
-                  {/* Dates */}
-                  {(phase.startDate || phase.endDate) && (
-                    <div className="flex gap-4 text-xs text-muted-foreground">
-                      {phase.startDate && (
-                        <span>Started: {phase.startDate.toLocaleDateString()}</span>
-                      )}
-                      {phase.endDate && (
-                        <span>Due: {phase.endDate.toLocaleDateString()}</span>
-                      )}
+                  {/* Phase Details */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-2">
+                      <h5 className="font-medium text-sm truncate">{phase.name}</h5>
+                      <span className="text-xs text-muted-foreground ml-2">{phase.progress_percentage}%</span>
                     </div>
-                  )}
+                    
+                    {/* Progress Bar */}
+                    <div className="relative mb-2">
+                      <Progress 
+                        value={phase.progress_percentage} 
+                        className="h-2"
+                      />
+                      <div 
+                        className={`absolute top-0 left-0 h-2 rounded-full transition-all duration-300 ${getProgressColor(phase.status)}`}
+                        style={{ width: `${phase.progress_percentage}%` }}
+                      />
+                    </div>
+                    
+                    {/* Dates */}
+                    {(phase.start_date || phase.end_date) && (
+                      <div className="flex gap-4 text-xs text-muted-foreground">
+                        {phase.start_date && (
+                          <span>Started: {new Date(phase.start_date).toLocaleDateString()}</span>
+                        )}
+                        {phase.end_date && (
+                          <span>Due: {new Date(phase.end_date).toLocaleDateString()}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
+            ))
+          ) : (
+            <div className="text-center py-8">
+              <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">No phases configured yet</p>
             </div>
-          ))}
+          )}
         </div>
         
         {/* Summary Stats */}
-        <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-          <div className="text-center">
-            <p className="text-lg font-bold text-progress-complete">
-              {project.phases.filter(p => p.status === 'completed').length}
-            </p>
-            <p className="text-xs text-muted-foreground">Completed</p>
+        {project.phases && project.phases.length > 0 && (
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+            <div className="text-center">
+              <p className="text-lg font-bold text-progress-complete">
+                {project.phases.filter(p => p.status === 'completed').length}
+              </p>
+              <p className="text-xs text-muted-foreground">Completed</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-bold text-progress-in-progress">
+                {project.phases.filter(p => p.status === 'in_progress').length}
+              </p>
+              <p className="text-xs text-muted-foreground">In Progress</p>
+            </div>
           </div>
-          <div className="text-center">
-            <p className="text-lg font-bold text-progress-in-progress">
-              {project.phases.filter(p => p.status === 'in_progress').length}
-            </p>
-            <p className="text-xs text-muted-foreground">In Progress</p>
-          </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );

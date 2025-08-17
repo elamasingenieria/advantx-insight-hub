@@ -4,8 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, CheckCircle, Calendar, DollarSign } from 'lucide-react';
-import { PhaseManager } from '@/components/admin/project-setup/PhaseManager';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArrowLeft, CheckCircle, Calendar, DollarSign, FolderOpen, ListTodo, CreditCard } from 'lucide-react';
+import { PhaseManager } from '@/components/admin/project-management/PhaseManager';
+import { TaskManager } from '@/components/admin/project-management/TaskManager';
 import { PaymentManager } from '@/components/admin/project-setup/PaymentManager';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -32,14 +34,10 @@ export default function ProjectSetup() {
   const { toast } = useToast();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
-  const [phases, setPhases] = useState<any[]>([]);
-  const [payments, setPayments] = useState<any[]>([]);
 
   useEffect(() => {
     if (id) {
       fetchProject();
-      fetchPhases();
-      fetchPayments();
     }
   }, [id]);
 
@@ -73,35 +71,7 @@ export default function ProjectSetup() {
     }
   };
 
-  const fetchPhases = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('phases')
-        .select('*')
-        .eq('project_id', id)
-        .order('order_index');
 
-      if (error) throw error;
-      setPhases(data || []);
-    } catch (error: any) {
-      console.error('Error fetching phases:', error);
-    }
-  };
-
-  const fetchPayments = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('payment_schedules')
-        .select('*')
-        .eq('project_id', id)
-        .order('due_date');
-
-      if (error) throw error;
-      setPayments(data || []);
-    } catch (error: any) {
-      console.error('Error fetching payments:', error);
-    }
-  };
 
   const completeSetup = () => {
     toast({
@@ -202,69 +172,78 @@ export default function ProjectSetup() {
             </Card>
           </div>
 
-          {/* Setup Sections */}
-          <div className="space-y-6">
-            {/* Phase Management */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Project Phases ({phases.length})
-                </CardTitle>
-                <CardDescription>
-                  Define the phases of your project to organize work and track progress
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <PhaseManager
-                  projectId={id!}
-                  phases={phases}
-                  onPhasesChange={fetchPhases}
-                />
-              </CardContent>
-            </Card>
+          {/* Project Management Tabs */}
+          <Tabs defaultValue="phases" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="phases" className="flex items-center gap-2">
+                <FolderOpen className="w-4 h-4" />
+                Phases
+              </TabsTrigger>
+              <TabsTrigger value="tasks" className="flex items-center gap-2">
+                <ListTodo className="w-4 h-4" />
+                Tasks
+              </TabsTrigger>
+              <TabsTrigger value="payments" className="flex items-center gap-2">
+                <CreditCard className="w-4 h-4" />
+                Payments
+              </TabsTrigger>
+            </TabsList>
 
-            {/* Payment Management */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
-                  Payment Schedule ({payments.length})
-                </CardTitle>
-                <CardDescription>
-                  Set up payment milestones and due dates for the project
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <PaymentManager
-                  projectId={id!}
-                  payments={payments}
-                  phases={phases}
-                  onPaymentsChange={fetchPayments}
-                />
-              </CardContent>
-            </Card>
+            <TabsContent value="phases" className="space-y-6">
+              <PhaseManager projectId={id!} projectName={project.name} />
+            </TabsContent>
 
-            {/* Complete Setup */}
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-semibold flex items-center gap-2">
-                      <CheckCircle className="h-5 w-5" />
-                      Setup Complete
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Your project has been created successfully. You can now access the project dashboard.
-                    </p>
-                  </div>
-                  <Button onClick={completeSetup} size="lg">
+            <TabsContent value="tasks" className="space-y-6">
+              <TaskManager projectId={id!} projectName={project.name} />
+            </TabsContent>
+
+            <TabsContent value="payments" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    Payment Schedule
+                  </CardTitle>
+                  <CardDescription>
+                    Set up payment milestones and due dates for the project
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <PaymentManager
+                    projectId={id!}
+                    payments={[]}
+                    phases={[]}
+                    onPaymentsChange={() => {}}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+
+          {/* Quick Actions */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5" />
+                    Project Management
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Use the tabs above to manage phases, tasks, and payments for this project.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => navigate('/admin/projects')}>
+                    All Projects
+                  </Button>
+                  <Button onClick={completeSetup}>
                     Go to Dashboard
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
