@@ -49,11 +49,13 @@ interface ProjectWizardData {
     isClientLiaison: boolean;
   }>;
   paymentSchedule: Array<{
+    id?: string;
     name: string;
     amount: number;
-    dueDate: Date;
-    phaseId: string;
+    due_date: Date;
     description: string;
+    status: 'pending' | 'paid' | 'overdue' | 'cancelled';
+    phaseId?: string;
   }>;
   dashboardConfig: {
     widgets: string[];

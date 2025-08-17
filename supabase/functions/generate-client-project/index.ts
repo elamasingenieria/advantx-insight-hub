@@ -150,9 +150,9 @@ serve(async (req) => {
         project_id: project.id,
         name: payment.name || 'Payment',
         amount: payment.amount || 0,
-        due_date: payment.dueDate,
+        due_date: payment.due_date,
         description: payment.description || '',
-        status: 'pending',
+        status: payment.status || 'pending',
       }));
 
       const { error: paymentsError } = await supabaseService
