@@ -287,8 +287,7 @@ export function DashboardConfigStep({ data, onUpdate }: DashboardConfigStepProps
                           config.branding.primaryColor === preset.value ? 'ring-2 ring-offset-2' : 'hover:scale-105'
                         }`}
                         style={{ 
-                          borderColor: config.branding.primaryColor === preset.value ? preset.value : undefined,
-                          ringColor: preset.value 
+                          borderColor: config.branding.primaryColor === preset.value ? preset.value : undefined
                         }}
                         onClick={() => updateConfig('branding', { primaryColor: preset.value })}
                       >

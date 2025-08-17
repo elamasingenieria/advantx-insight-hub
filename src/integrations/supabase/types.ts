@@ -55,6 +55,91 @@ export type Database = {
           },
         ]
       }
+      dashboard_configs: {
+        Row: {
+          branding: Json | null
+          created_at: string
+          id: string
+          notifications: Json | null
+          permissions: Json | null
+          project_id: string | null
+          updated_at: string
+          widgets: string[] | null
+        }
+        Insert: {
+          branding?: Json | null
+          created_at?: string
+          id?: string
+          notifications?: Json | null
+          permissions?: Json | null
+          project_id?: string | null
+          updated_at?: string
+          widgets?: string[] | null
+        }
+        Update: {
+          branding?: Json | null
+          created_at?: string
+          id?: string
+          notifications?: Json | null
+          permissions?: Json | null
+          project_id?: string | null
+          updated_at?: string
+          widgets?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_configs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_schedules: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          due_date: string
+          id: string
+          name: string
+          project_id: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          due_date: string
+          id?: string
+          name: string
+          project_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          due_date?: string
+          id?: string
+          name?: string
+          project_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_schedules_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       phases: {
         Row: {
           created_at: string
@@ -176,6 +261,47 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          project_type: string
+          template_data: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          project_type: string
+          template_data: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          project_type?: string
+          template_data?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
