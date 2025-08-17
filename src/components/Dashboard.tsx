@@ -72,8 +72,12 @@ const mockProject = {
 };
 
 export function Dashboard() {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, loading } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Debug logging
+  console.log('Dashboard render - profile:', profile);
+  console.log('Dashboard render - loading:', loading);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -88,9 +92,41 @@ export function Dashboard() {
     });
   };
 
-  const getDashboardContent = () => {
-    if (!profile) return null;
+  // Show loading state if still loading
+  if (loading) {
+    console.log('Dashboard showing loading state');
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
+  // Show error state if no profile
+  if (!profile) {
+    console.log('Dashboard - no profile found');
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-foreground mb-2">No Profile Found</h1>
+          <p className="text-muted-foreground mb-4">Unable to load your profile information.</p>
+          <button 
+            onClick={signOut}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded"
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const getDashboardContent = () => {
+    console.log('Getting dashboard content for role:', profile.role);
+    
     switch (profile.role) {
       case 'client':
         return <ClientDashboard />;
@@ -99,9 +135,12 @@ export function Dashboard() {
       case 'admin':
         return <AdminDashboard />;
       default:
+        console.log('Unknown role, defaulting to client dashboard');
         return <ClientDashboard />;
     }
   };
+
+  console.log('About to render dashboard with profile:', profile);
 
   return (
     <div className="min-h-screen bg-background">
