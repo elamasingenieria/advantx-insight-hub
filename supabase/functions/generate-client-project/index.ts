@@ -31,16 +31,20 @@ serve(async (req) => {
       throw new Error("Unauthorized");
     }
 
-    // Verify admin role
-    const { data: profile } = await supabaseClient
-      .from('profiles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
+    // Verify admin role using the security definer function
+    const { data: userRole, error: roleError } = await supabaseClient
+      .rpc('get_current_user_role');
 
-    if (!profile || profile.role !== 'admin') {
-      throw new Error("Admin access required");
+    if (roleError) {
+      console.error('Role check error:', roleError);
+      throw new Error("Unable to verify user permissions");
     }
+
+    if (!userRole || !['admin', 'team_member'].includes(userRole)) {
+      throw new Error("Admin or team member access required");
+    }
+
+    console.log(`User role verified: ${userRole}`);
 
     const { wizardData } = await req.json();
     
@@ -123,44 +127,71 @@ serve(async (req) => {
     }
 
     // Create project member assignments
-    const memberInserts = wizardData.teamAssignments.map(assignment => ({
-      project_id: project.id,
-      profile_id: assignment.profileId,
-      role: assignment.role,
-    }));
+    if (wizardData.teamAssignments && wizardData.teamAssignments.length > 0) {
+      const memberInserts = wizardData.teamAssignments.map(assignment => ({
+        project_id: project.id,
+        profile_id: assignment.profileId,
+        role: assignment.role || 'member',
+      }));
 
-    if (memberInserts.length > 0) {
-      await supabaseService
+      const { error: membersError } = await supabaseService
         .from('project_members')
         .insert(memberInserts);
+
+      if (membersError) {
+        console.error('Error inserting project members:', membersError);
+        throw new Error(`Failed to assign team members: ${membersError.message}`);
+      }
     }
 
     // Create payment schedule
     if (wizardData.paymentSchedule && wizardData.paymentSchedule.length > 0) {
       const paymentInserts = wizardData.paymentSchedule.map(payment => ({
         project_id: project.id,
-        name: payment.name,
-        amount: payment.amount,
+        name: payment.name || 'Payment',
+        amount: payment.amount || 0,
         due_date: payment.dueDate,
-        description: payment.description,
+        description: payment.description || '',
         status: 'pending',
       }));
 
-      await supabaseService
+      const { error: paymentsError } = await supabaseService
         .from('payment_schedules')
         .insert(paymentInserts);
+
+      if (paymentsError) {
+        console.error('Error inserting payment schedule:', paymentsError);
+        throw new Error(`Failed to create payment schedule: ${paymentsError.message}`);
+      }
     }
 
     // Create dashboard configuration
-    await supabaseService
+    const { error: dashboardError } = await supabaseService
       .from('dashboard_configs')
       .insert({
         project_id: project.id,
-        widgets: wizardData.dashboardConfig.widgets,
-        branding: wizardData.dashboardConfig.branding,
-        permissions: wizardData.dashboardConfig.permissions,
-        notifications: wizardData.dashboardConfig.notifications,
+        widgets: wizardData.dashboardConfig?.widgets || ['progress', 'tasks', 'payments', 'team'],
+        branding: wizardData.dashboardConfig?.branding || {
+          primaryColor: '#3b82f6',
+          welcomeMessage: 'Welcome to your project dashboard'
+        },
+        permissions: wizardData.dashboardConfig?.permissions || {
+          viewTasks: true,
+          viewPayments: true,
+          viewTeam: true,
+          viewTimeline: true
+        },
+        notifications: wizardData.dashboardConfig?.notifications || {
+          emailUpdates: true,
+          deadlineReminders: true,
+          paymentReminders: true
+        }
       });
+
+    if (dashboardError) {
+      console.error('Error creating dashboard config:', dashboardError);
+      throw new Error(`Failed to create dashboard configuration: ${dashboardError.message}`);
+    }
 
     // Fetch complete project data for response
     const { data: completeProject } = await supabaseService

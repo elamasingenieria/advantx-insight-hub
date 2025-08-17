@@ -45,7 +45,7 @@ const roleLabels = {
 } as const;
 
 export default function UserManagement() {
-  const { profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -167,7 +167,18 @@ export default function UserManagement() {
     }
   };
 
-  if (profile?.role !== 'admin') {
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || profile?.role !== 'admin') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">

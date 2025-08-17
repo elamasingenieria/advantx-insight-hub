@@ -94,6 +94,13 @@ export type Database = {
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_dashboard_configs_project"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
         ]
       }
       payment_schedules: {
@@ -131,6 +138,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_payment_schedules_project"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payment_schedules_project_id_fkey"
             columns: ["project_id"]
@@ -249,6 +263,20 @@ export type Database = {
           role?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_project_members_profile"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_project_members_project"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "project_members_profile_id_fkey"
             columns: ["profile_id"]
