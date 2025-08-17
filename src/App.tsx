@@ -10,6 +10,8 @@ import Auth from "./pages/Auth";
 import { Dashboard } from "@/components/Dashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import ProjectGenerator from "./pages/admin/ProjectGenerator";
+import ProjectCreation from "./pages/admin/ProjectCreation";
+import ProjectSetup from "./pages/admin/ProjectSetup";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +47,22 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <ProjectGenerator />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/projects/new" 
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <ProjectCreation />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/projects/:id/setup" 
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <ProjectSetup />
                 </ProtectedRoute>
               } 
             />

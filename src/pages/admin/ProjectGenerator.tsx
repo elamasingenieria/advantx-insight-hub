@@ -328,6 +328,20 @@ export default function ProjectGenerator() {
           <p className="text-muted-foreground">
             Create a complete project setup with dashboard, tasks, phases, and team assignments
           </p>
+          
+          <Card className="mt-4 border-primary/20">
+            <CardContent className="pt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold">Step-by-Step Project Creation (Recommended)</h3>
+                  <p className="text-sm text-muted-foreground">Create project first, then add phases and payments individually</p>
+                </div>
+                <Button onClick={() => navigate('/admin/projects/new')} variant="default">
+                  Create New Project
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="max-w-4xl mx-auto">
