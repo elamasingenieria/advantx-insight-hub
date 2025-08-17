@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import { Dashboard } from "@/components/Dashboard";
 import UserManagement from "./pages/admin/UserManagement";
+import ProjectGenerator from "./pages/admin/ProjectGenerator";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <UserManagement />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/project-generator" 
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <ProjectGenerator />
                 </ProtectedRoute>
               } 
             />
