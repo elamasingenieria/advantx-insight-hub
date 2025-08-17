@@ -21,6 +21,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  createMissingProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -47,12 +48,76 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Error fetching profile:', error);
+        
+        // If profile doesn't exist, try to create it
+        if (error.code === 'PGRST116' || error.message?.includes('No rows returned')) {
+          console.log('Profile not found, attempting to create one...');
+          await createMissingProfile();
+          return;
+        }
         return;
       }
 
       setProfile(data);
     } catch (error) {
       console.error('Error in refreshProfile:', error);
+    }
+  };
+
+  const createMissingProfile = async () => {
+    if (!session?.user) return;
+
+    try {
+      const user = session.user;
+      const userData = user.user_metadata || {};
+      
+      console.log('Creating missing profile for user:', user.id);
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert({
+          user_id: user.id,
+          email: user.email || '',
+          full_name: userData.full_name || user.email || 'User',
+          role: (userData.role as 'client' | 'team_member' | 'admin') || 'client',
+          company: userData.company || null
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating missing profile:', error);
+        
+        // If insert failed due to conflict, try to fetch again
+        if (error.code === '23505') { // unique violation
+          console.log('Profile already exists, fetching...');
+          const { data: existingProfile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+            
+          if (!fetchError && existingProfile) {
+            setProfile(existingProfile);
+          }
+        }
+        return;
+      }
+
+      console.log('Profile created successfully:', data);
+      setProfile(data);
+      
+      toast({
+        title: "Profile Created",
+        description: "Your profile has been set up successfully.",
+      });
+    } catch (error) {
+      console.error('Error in createMissingProfile:', error);
+      toast({
+        variant: "destructive",
+        title: "Profile Setup Error",
+        description: "There was an issue setting up your profile. Please contact support.",
+      });
     }
   };
 
@@ -157,6 +222,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signIn,
       signOut,
       refreshProfile,
+      createMissingProfile,
     }}>
       {children}
     </AuthContext.Provider>

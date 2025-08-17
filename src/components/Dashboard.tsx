@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { ROISummaryCard } from '@/components/ROISummaryCard';
 import { ProgressTracker } from '@/components/ProgressTracker';
 import { Link } from 'react-router-dom';
+import { syncMissingProfiles } from '@/utils/profileSync';
+import { useToast } from '@/hooks/use-toast';
 import { 
   LogOut, 
   User, 
@@ -19,7 +21,8 @@ import {
   CreditCard,
   Bell,
   Settings,
-  Shield
+  Shield,
+  RefreshCw
 } from 'lucide-react';
 
 // Mock data - in real app this would come from Supabase
@@ -72,10 +75,13 @@ const mockProject = {
 };
 
 export function Dashboard() {
-  const { profile, signOut, loading } = useAuth();
+  const { profile, signOut, loading, user, session, createMissingProfile } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isCreatingProfile, setIsCreatingProfile] = useState(false);
 
   // Debug logging
+  console.log('Dashboard render - user:', user?.id);
+  console.log('Dashboard render - session:', session?.user?.id);
   console.log('Dashboard render - profile:', profile);
   console.log('Dashboard render - loading:', loading);
 
@@ -105,20 +111,53 @@ export function Dashboard() {
     );
   }
 
+  const handleCreateProfile = async () => {
+    setIsCreatingProfile(true);
+    try {
+      await createMissingProfile();
+    } catch (error) {
+      console.error('Error creating profile:', error);
+    } finally {
+      setIsCreatingProfile(false);
+    }
+  };
+
   // Show error state if no profile
-  if (!profile) {
-    console.log('Dashboard - no profile found');
+  if (!profile && user) {
+    console.log('Dashboard - no profile found for authenticated user');
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-2">No Profile Found</h1>
-          <p className="text-muted-foreground mb-4">Unable to load your profile information.</p>
-          <button 
+        <div className="text-center max-w-md mx-auto">
+          <div className="w-16 h-16 bg-warning/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <User className="w-8 h-8 text-warning" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Profile Setup Required</h1>
+          <p className="text-muted-foreground mb-6">
+            Your account is authenticated, but we need to set up your profile to access the dashboard.
+          </p>
+          <div className="space-y-3">
+            <Button 
+              onClick={handleCreateProfile}
+              disabled={isCreatingProfile}
+              className="w-full"
+            >
+              {isCreatingProfile && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />}
+              {isCreatingProfile ? 'Setting up profile...' : 'Set up Profile'}
+            </Button>
+            <Button 
+              variant="outline"
             onClick={signOut}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded"
+              className="w-full"
           >
             Sign Out
-          </button>
+            </Button>
+          </div>
+          <div className="mt-6 p-4 bg-card rounded-lg border text-left">
+            <h3 className="font-medium mb-2">Debug Information:</h3>
+            <p className="text-sm text-muted-foreground">User ID: {user?.id}</p>
+            <p className="text-sm text-muted-foreground">Email: {user?.email}</p>
+            <p className="text-sm text-muted-foreground">Profile Status: Missing</p>
+          </div>
         </div>
       </div>
     );
@@ -355,10 +394,245 @@ function TeamDashboard() {
 }
 
 function AdminDashboard() {
+  const { toast } = useToast();
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncProfiles = async () => {
+    setIsSyncing(true);
+    try {
+      const result = await syncMissingProfiles();
+      
+      if (result.success) {
+        toast({
+          title: "Profile Sync Complete",
+          description: `Successfully synced ${result.syncedCount || 0} missing profiles.`,
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Sync Failed",
+          description: result.error || "Failed to sync profiles.",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Sync Error",
+        description: error.message || "An unexpected error occurred.",
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
-      <h2 className="text-2xl font-bold">Admin Dashboard</h2>
-      <p>Administrator dashboard with full system management capabilities.</p>
+      {/* Welcome Section */}
+      <div className="text-center space-y-2">
+        <h2 className="text-3xl font-bold">Admin Dashboard</h2>
+        <p className="text-muted-foreground max-w-2xl mx-auto">
+          Access all administrative functions and manage the AdvantX platform.
+        </p>
+        <Button
+          onClick={handleSyncProfiles}
+          disabled={isSyncing}
+          variant="outline"
+          size="sm"
+          className="mt-4"
+        >
+          {isSyncing ? (
+            <>
+              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+              Syncing Profiles...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Sync Missing Profiles
+            </>
+          )}
+        </Button>
+      </div>
+
+      {/* Admin Navigation Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* User Management */}
+        <Link to="/admin/users">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <Users className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <CardTitle>User Management</CardTitle>
+                  <CardDescription>Manage users, roles, and permissions</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Create, edit, and manage user accounts across the platform. Control access levels and user permissions.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        {/* Project Creator */}
+        <Link to="/admin/projects/new">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-success/10 rounded-lg flex items-center justify-center">
+                  <FolderOpen className="w-6 h-6 text-success" />
+                </div>
+                <div>
+                  <CardTitle>Project Creator</CardTitle>
+                  <CardDescription>Create new client projects</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Set up new projects with custom dashboards, phases, team assignments, and payment schedules.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        {/* Project Generator */}
+        <Link to="/admin/project-generator">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-warning/10 rounded-lg flex items-center justify-center">
+                  <Settings className="w-6 h-6 text-warning" />
+                </div>
+                <div>
+                  <CardTitle>Project Generator</CardTitle>
+                  <CardDescription>AI-powered project setup</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Use the advanced project generator to create comprehensive project structures with automation.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+
+      {/* Quick Stats Section */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+              <User className="w-4 h-4 text-muted-foreground" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">--</div>
+            <div className="text-xs text-muted-foreground">Platform-wide</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
+              <Building className="w-4 h-4 text-muted-foreground" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">--</div>
+            <div className="text-xs text-muted-foreground">In progress</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
+              <TrendingUp className="w-4 h-4 text-success" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-success">--</div>
+            <div className="text-xs text-muted-foreground">Current month</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium">System Health</CardTitle>
+              <Shield className="w-4 h-4 text-primary" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-primary">Healthy</div>
+            <div className="text-xs text-muted-foreground">All systems operational</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Activity Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Administrative Activity</CardTitle>
+          <CardDescription>Latest actions and system events</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-lg border">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                  <User className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium">New user registration</p>
+                  <p className="text-sm text-muted-foreground">Client account created</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">2 hours ago</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between p-3 rounded-lg border">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-success/10 rounded-full flex items-center justify-center">
+                  <FolderOpen className="w-4 h-4 text-success" />
+                </div>
+                <div>
+                  <p className="font-medium">Project milestone completed</p>
+                  <p className="text-sm text-muted-foreground">E-commerce Platform - Phase 2</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">5 hours ago</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-lg border">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-warning/10 rounded-full flex items-center justify-center">
+                  <Settings className="w-4 h-4 text-warning" />
+                </div>
+                <div>
+                  <p className="font-medium">System maintenance scheduled</p>
+                  <p className="text-sm text-muted-foreground">Upcoming maintenance window</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">1 day ago</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
