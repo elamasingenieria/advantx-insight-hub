@@ -1,8 +1,20 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, ArrowRight, CheckCircle, Rocket } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { ArrowLeft, ArrowRight, CheckCircle, Rocket, AlertTriangle } from 'lucide-react';
 import { StepIndicator } from '@/components/admin/project-generator/StepIndicator';
 import { ProjectInfoStep } from '@/components/admin/project-generator/ProjectInfoStep';
 import { PhasesTimelineStep } from '@/components/admin/project-generator/PhasesTimelineStep';
@@ -88,9 +100,11 @@ const steps = [
 
 export default function ProjectGenerator() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedProject, setGeneratedProject] = useState<any>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [wizardData, setWizardData] = useState<ProjectWizardData>({
     projectInfo: {
       projectName: '',
@@ -144,32 +158,68 @@ export default function ProjectGenerator() {
     }
   };
 
+  const validateWizardData = () => {
+    const errors = [];
+    
+    // Basic validation
+    if (!wizardData.projectInfo.clientId) errors.push("Client must be selected");
+    if (!wizardData.projectInfo.projectName) errors.push("Project name is required");
+    if (!wizardData.projectInfo.totalBudget || wizardData.projectInfo.totalBudget <= 0) errors.push("Total budget must be positive");
+    if (wizardData.phases.length === 0) errors.push("At least one phase is required");
+    
+    return errors;
+  };
+
   const generateProject = async () => {
+    const validationErrors = validateWizardData();
+    if (validationErrors.length > 0) {
+      toast({
+        title: "Validation Error",
+        description: validationErrors.join(". "),
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsGenerating(true);
     try {
+      console.log('Starting project generation with data:', wizardData);
+      
       const result = await supabase.functions.invoke('generate-client-project', {
         body: { wizardData }
       });
 
       if (result.error) {
-        throw result.error;
+        console.error('Edge function error:', result.error);
+        throw new Error(result.error.message || 'Failed to create project');
       }
 
+      console.log('Project generated successfully:', result.data);
       setGeneratedProject(result.data);
+      setShowConfirmDialog(false);
+      
       toast({
         title: "Project Generated Successfully!",
-        description: "The complete project setup has been created.",
+        description: `Project "${result.data.name}" has been created with all components.`,
       });
     } catch (error) {
       console.error('Generation error:', error);
       toast({
-        title: "Generation Failed",
-        description: "There was an error creating the project. Please try again.",
+        title: "Generation Failed", 
+        description: error instanceof Error ? error.message : "There was an error creating the project. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleGenerateProject = () => {
+    setShowConfirmDialog(true);
+  };
+
+  const handleNavigateToProject = (projectId: string) => {
+    navigate(`/projects/${projectId}`);
   };
 
   const renderCurrentStep = () => {
@@ -314,23 +364,61 @@ export default function ProjectGenerator() {
 
             <div className="space-x-2">
               {currentStep === steps.length ? (
-                <Button
-                  onClick={generateProject}
-                  disabled={isGenerating}
-                  className="bg-primary text-primary-foreground"
-                >
-                  {isGenerating ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                      Generating...
-                    </div>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Generate Project
-                    </>
-                  )}
-                </Button>
+                <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      onClick={handleGenerateProject}
+                      disabled={isGenerating}
+                      className="bg-primary text-primary-foreground"
+                    >
+                      {isGenerating ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                          Generating...
+                        </div>
+                      ) : (
+                        <>
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Generate Project
+                        </>
+                      )}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5 text-amber-500" />
+                        Confirm Project Creation
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="space-y-2">
+                        <p>You're about to create a complete project setup with:</p>
+                        <ul className="list-disc ml-4 space-y-1">
+                          <li><strong>{wizardData.projectInfo.projectName}</strong> for {wizardData.projectInfo.clientId ? 'selected client' : 'no client'}</li>
+                          <li>{wizardData.phases.length} project phases</li>
+                          <li>{wizardData.teamAssignments.length} team member assignments</li>
+                          <li>{wizardData.paymentSchedule.length} payment schedule items</li>
+                          <li>Custom dashboard configuration</li>
+                        </ul>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          This will create database records and cannot be easily undone.
+                        </p>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={isGenerating}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={generateProject} disabled={isGenerating}>
+                        {isGenerating ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            Creating...
+                          </div>
+                        ) : (
+                          'Create Project'
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               ) : (
                 <Button onClick={handleNext}>
                   Next

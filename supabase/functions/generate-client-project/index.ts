@@ -66,7 +66,9 @@ serve(async (req) => {
       throw new Error("Client must be selected");
     }
 
-    // Create project with proper field mapping
+    console.log(`Starting project creation for client: ${clientId}`);
+
+    // Step 1: Create project with proper field mapping
     const { data: project, error: projectError } = await supabaseService
       .from('projects')
       .insert({
@@ -84,9 +86,14 @@ serve(async (req) => {
       .select()
       .single();
 
-    if (projectError) throw projectError;
+    if (projectError) {
+      console.error('Failed to create project:', projectError);
+      throw new Error(`Failed to create project: ${projectError.message}`);
+    }
 
-    // Create phases
+    console.log(`Project created successfully: ${project.id}`);
+
+    // Step 2: Create phases
     const phaseInserts = wizardData.phases.map((phase, index) => ({
       project_id: project.id,
       name: phase.name,
@@ -103,9 +110,16 @@ serve(async (req) => {
       .insert(phaseInserts)
       .select();
 
-    if (phasesError) throw phasesError;
+    if (phasesError) {
+      console.error('Failed to create phases:', phasesError);
+      // Rollback: Delete the created project
+      await supabaseService.from('projects').delete().eq('id', project.id);
+      throw new Error(`Failed to create phases: ${phasesError.message}`);
+    }
 
-    // Create tasks for each phase
+    console.log(`Created ${phases.length} phases for project ${project.id}`);
+
+    // Step 3: Create tasks for each phase
     for (let i = 0; i < wizardData.phases.length; i++) {
       const phaseData = wizardData.phases[i];
       const phaseId = phases[i].id;
@@ -120,13 +134,20 @@ serve(async (req) => {
           status: 'todo',
         }));
 
-        await supabaseService
+        const { error: tasksError } = await supabaseService
           .from('tasks')
           .insert(taskInserts);
+
+        if (tasksError) {
+          console.error(`Failed to create tasks for phase ${phaseId}:`, tasksError);
+          // Continue with other phases, but log the error
+        }
       }
     }
 
-    // Create project member assignments
+    console.log(`Created tasks for ${wizardData.phases.length} phases`);
+
+    // Step 4: Create project member assignments
     if (wizardData.teamAssignments && wizardData.teamAssignments.length > 0) {
       const memberInserts = wizardData.teamAssignments.map(assignment => ({
         project_id: project.id,
@@ -140,11 +161,18 @@ serve(async (req) => {
 
       if (membersError) {
         console.error('Error inserting project members:', membersError);
+        // Rollback: Delete project and phases
+        await supabaseService.from('phases').delete().eq('project_id', project.id);
+        await supabaseService.from('projects').delete().eq('id', project.id);
         throw new Error(`Failed to assign team members: ${membersError.message}`);
       }
+
+      console.log(`Assigned ${wizardData.teamAssignments.length} team members`);
+    } else {
+      console.log('No team assignments to create');
     }
 
-    // Create payment schedule
+    // Step 5: Create payment schedule
     if (wizardData.paymentSchedule && wizardData.paymentSchedule.length > 0) {
       const paymentInserts = wizardData.paymentSchedule.map(payment => ({
         project_id: project.id,
@@ -161,11 +189,19 @@ serve(async (req) => {
 
       if (paymentsError) {
         console.error('Error inserting payment schedule:', paymentsError);
+        // Rollback: Delete project, phases, and project members
+        await supabaseService.from('project_members').delete().eq('project_id', project.id);
+        await supabaseService.from('phases').delete().eq('project_id', project.id);
+        await supabaseService.from('projects').delete().eq('id', project.id);
         throw new Error(`Failed to create payment schedule: ${paymentsError.message}`);
       }
+
+      console.log(`Created ${wizardData.paymentSchedule.length} payment schedule items`);
+    } else {
+      console.log('No payment schedule to create');
     }
 
-    // Create dashboard configuration
+    // Step 6: Create dashboard configuration
     const { error: dashboardError } = await supabaseService
       .from('dashboard_configs')
       .insert({
@@ -190,10 +226,19 @@ serve(async (req) => {
 
     if (dashboardError) {
       console.error('Error creating dashboard config:', dashboardError);
+      // Rollback: Delete all created resources
+      await supabaseService.from('payment_schedules').delete().eq('project_id', project.id);
+      await supabaseService.from('project_members').delete().eq('project_id', project.id);
+      await supabaseService.from('phases').delete().eq('project_id', project.id);
+      await supabaseService.from('projects').delete().eq('id', project.id);
       throw new Error(`Failed to create dashboard configuration: ${dashboardError.message}`);
     }
 
-    // Fetch complete project data for response
+    console.log(`Dashboard configuration created for project ${project.id}`);
+
+    // Step 7: Fetch complete project data for response
+
+    
     const { data: completeProject } = await supabaseService
       .from('projects')
       .select(`

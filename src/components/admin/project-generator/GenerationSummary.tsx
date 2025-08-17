@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -50,6 +51,8 @@ interface GenerationSummaryProps {
 }
 
 export function GenerationSummary({ project, onStartNew }: GenerationSummaryProps) {
+  const navigate = useNavigate();
+  
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -60,6 +63,16 @@ export function GenerationSummary({ project, onStartNew }: GenerationSummaryProp
   const totalPaymentAmount = project.payments.reduce((sum, payment) => sum + payment.amount, 0);
   const totalDuration = project.phases.reduce((sum, phase) => sum + phase.duration, 0);
   const clientLiaison = project.teamMembers.find(member => member.role === 'project_lead');
+
+  const handleOpenDashboard = () => {
+    // Navigate to the project dashboard or client view
+    navigate(`/projects/${project.id}`);
+  };
+
+  const handleOpenTeamWorkspace = () => {
+    // Navigate to team workspace for this project
+    navigate(`/projects/${project.id}/team`);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -297,11 +310,11 @@ export function GenerationSummary({ project, onStartNew }: GenerationSummaryProp
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
-            <Button size="lg" className="w-full sm:w-auto">
+            <Button size="lg" className="w-full sm:w-auto" onClick={handleOpenDashboard}>
               <ExternalLink className="h-5 w-5 mr-2" />
-              Open Client Dashboard
+              Open Project Dashboard
             </Button>
-            <Button variant="outline" size="lg" className="w-full sm:w-auto">
+            <Button variant="outline" size="lg" className="w-full sm:w-auto" onClick={handleOpenTeamWorkspace}>
               <Users className="h-5 w-5 mr-2" />
               Access Team Workspace
             </Button>
