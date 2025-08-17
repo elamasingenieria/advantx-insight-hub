@@ -32,7 +32,7 @@ import {
 
 
 export function Dashboard() {
-  const { profile, signOut, loading, user, session, createMissingProfile } = useAuth();
+  const { profile, signOut, loading, user, session, createMissingProfile, debugProfile } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isCreatingProfile, setIsCreatingProfile] = useState(false);
 
@@ -92,7 +92,7 @@ export function Dashboard() {
           <p className="text-muted-foreground mb-6">
             Your account is authenticated, but we need to set up your profile to access the dashboard.
           </p>
-          <div className="space-y-3">
+                    <div className="space-y-3">
             <Button 
               onClick={handleCreateProfile}
               disabled={isCreatingProfile}
@@ -103,10 +103,17 @@ export function Dashboard() {
             </Button>
             <Button 
               variant="outline"
-            onClick={signOut}
+              onClick={debugProfile}
               className="w-full"
-          >
-            Sign Out
+            >
+              🔍 Debug Profile Issue
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={signOut}
+              className="w-full"
+            >
+              Sign Out
             </Button>
           </div>
           <div className="mt-6 p-4 bg-card rounded-lg border text-left">

@@ -1,12 +1,16 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '@/components/ThemeProvider';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -17,19 +21,35 @@ import {
   Mail,
   User,
   ExternalLink,
+  Moon,
+  Sun,
+  Monitor,
+  Palette,
+  Check,
 } from 'lucide-react';
 
 export function SettingsDropdown() {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
-      await signOut();
-      navigate('/auth');
+      console.log('Attempting to sign out...');
+      setIsOpen(false); // Close dropdown first
+      
+      // Add loading state or disable button to prevent double clicks
+      const result = await signOut();
+      console.log('Sign out result:', result);
+      console.log('Sign out successful, navigating to auth...');
+      
+      // Force navigation with replace to prevent back button issues
+      navigate('/auth', { replace: true });
     } catch (error) {
       console.error('Error signing out:', error);
+      // Still navigate to auth page even if there's an error
+      navigate('/auth', { replace: true });
     }
   };
 
@@ -111,6 +131,40 @@ export function SettingsDropdown() {
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
+
+        {/* Theme Selection */}
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger className="flex items-center gap-3 px-3 py-2 cursor-pointer">
+            <Palette className="h-4 w-4" />
+            <span className="text-sm">Theme</span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="w-48">
+            <DropdownMenuItem 
+              onClick={() => setTheme('light')}
+              className="flex items-center gap-3 px-3 py-2 cursor-pointer"
+            >
+              <Sun className="h-4 w-4" />
+              <span className="text-sm">Light</span>
+              {theme === 'light' && <Check className="h-4 w-4 ml-auto" />}
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => setTheme('dark')}
+              className="flex items-center gap-3 px-3 py-2 cursor-pointer"
+            >
+              <Moon className="h-4 w-4" />
+              <span className="text-sm">Dark</span>
+              {theme === 'dark' && <Check className="h-4 w-4 ml-auto" />}
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => setTheme('system')}
+              className="flex items-center gap-3 px-3 py-2 cursor-pointer"
+            >
+              <Monitor className="h-4 w-4" />
+              <span className="text-sm">System</span>
+              {theme === 'system' && <Check className="h-4 w-4 ml-auto" />}
+            </DropdownMenuItem>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
 
         {/* Settings */}
         <DropdownMenuItem 
