@@ -12,6 +12,7 @@ import { Link } from 'react-router-dom';
 import { syncMissingProfiles } from '@/utils/profileSync';
 import { useToast } from '@/hooks/use-toast';
 import { SettingsDropdown } from '@/components/SettingsDropdown';
+import { PaymentHistory } from '@/components/PaymentHistory';
 import { 
   User, 
   Building, 
@@ -110,10 +111,10 @@ export function Dashboard() {
             </Button>
             <Button 
               variant="outline"
-              onClick={signOut}
+            onClick={signOut}
               className="w-full"
-            >
-              Sign Out
+          >
+            Sign Out
             </Button>
           </div>
           <div className="mt-6 p-4 bg-card rounded-lg border text-left">
@@ -369,15 +370,19 @@ function ClientDashboard() {
                 <FolderOpen className="w-4 h-4 mr-2" />
                 View Project Files
               </Button>
-              <Button className="w-full justify-start" variant="outline">
+              <Button className="w-full justify-start" variant="outline" disabled>
                 <BookOpen className="w-4 h-4 mr-2" />
                 AI Learning Center
+                <Badge variant="secondary" className="ml-auto text-xs">
+                  Coming Soon!
+                </Badge>
               </Button>
-              <Button className="w-full justify-start" variant="outline">
-                <CreditCard className="w-4 h-4 mr-2" />
-                Payment History
-              </Button>
-              <Button className="w-full justify-start" variant="outline">
+              <PaymentHistory />
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={() => window.open('https://calendly.com/advant_x/seguimiento', '_blank')}
+              >
                 <Calendar className="w-4 h-4 mr-2" />
                 Schedule Meeting
               </Button>
@@ -657,6 +662,35 @@ function TeamDashboard() {
               </div>
             </CardContent>
           </Card>
+          
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button className="w-full justify-start" variant="outline">
+                <FolderOpen className="w-4 h-4 mr-2" />
+                View Project Files
+              </Button>
+              <Button className="w-full justify-start" variant="outline" disabled>
+                <BookOpen className="w-4 h-4 mr-2" />
+                AI Learning Center
+                <Badge variant="secondary" className="ml-auto text-xs">
+                  Coming Soon!
+                </Badge>
+              </Button>
+              <PaymentHistory />
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={() => window.open('https://calendly.com/advant_x/seguimiento', '_blank')}
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                Schedule Meeting
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
@@ -923,6 +957,36 @@ function AdminDashboard() {
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Quick Actions for Admin */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+          <CardDescription>Administrative shortcuts and utilities</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Button className="w-full justify-start" variant="outline">
+            <FolderOpen className="w-4 h-4 mr-2" />
+            View Project Files
+          </Button>
+          <Button className="w-full justify-start" variant="outline" disabled>
+            <BookOpen className="w-4 h-4 mr-2" />
+            AI Learning Center
+            <Badge variant="secondary" className="ml-auto text-xs">
+              Coming Soon!
+            </Badge>
+          </Button>
+          <PaymentHistory />
+          <Button 
+            className="w-full justify-start" 
+            variant="outline"
+            onClick={() => window.open('https://calendly.com/advant_x/seguimiento', '_blank')}
+          >
+            <Calendar className="w-4 h-4 mr-2" />
+            Schedule Meeting
+          </Button>
         </CardContent>
       </Card>
     </div>
