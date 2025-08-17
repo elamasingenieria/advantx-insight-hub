@@ -81,7 +81,7 @@ export function PaymentScheduleStep({ data, phases, totalBudget, currency, onUpd
     amount: 0,
     due_date: new Date(),
     description: '',
-    phaseId: ''
+    phaseId: 'none'
   });
 
   useEffect(() => {
@@ -130,7 +130,7 @@ export function PaymentScheduleStep({ data, phases, totalBudget, currency, onUpd
         name: item.name,
         amount,
         due_date: dueDate,
-        phaseId: index < milestonePhases.length ? milestonePhases[index].id : '',
+        phaseId: index < milestonePhases.length ? milestonePhases[index].id : 'none',
         description: item.description,
         status: 'pending' as const
       };
@@ -166,7 +166,7 @@ export function PaymentScheduleStep({ data, phases, totalBudget, currency, onUpd
       amount: 0,
       due_date: addWeeks(new Date(), 2), // Default to 2 weeks from now
       description: '',
-      phaseId: ''
+      phaseId: 'none'
     });
     setIsAddDialogOpen(false);
     
@@ -305,7 +305,7 @@ export function PaymentScheduleStep({ data, phases, totalBudget, currency, onUpd
                     <SelectValue placeholder="Select a phase..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No specific phase</SelectItem>
+                    <SelectItem value="none">No specific phase</SelectItem>
                     {milestonePhases.map((phase) => (
                       <SelectItem key={phase.id} value={phase.id}>
                         {phase.name}
@@ -556,7 +556,7 @@ export function PaymentScheduleStep({ data, phases, totalBudget, currency, onUpd
                       <SelectValue placeholder="Select a phase..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No specific phase</SelectItem>
+                      <SelectItem value="none">No specific phase</SelectItem>
                       {milestonePhases.map((phase) => (
                         <SelectItem key={phase.id} value={phase.id}>
                           {phase.name}
@@ -564,7 +564,7 @@ export function PaymentScheduleStep({ data, phases, totalBudget, currency, onUpd
                       ))}
                     </SelectContent>
                   </Select>
-                  {payment.phaseId && getPhaseById(payment.phaseId) && (
+                  {payment.phaseId && payment.phaseId !== 'none' && getPhaseById(payment.phaseId) && (
                     <div className="mt-1 text-xs text-muted-foreground">
                       Linked to phase: {getPhaseById(payment.phaseId)?.name}
                     </div>
