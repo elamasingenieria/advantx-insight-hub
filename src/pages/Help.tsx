@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import {
   Send,
   Bot,
@@ -279,102 +278,28 @@ export default function Help() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6 max-w-4xl">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-200px)]">
-          
-          {/* Sidebar with Quick Help */}
-          <div className="lg:col-span-1 space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Temas Populares</CardTitle>
-                <CardDescription>Preguntas frecuentes</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start h-auto p-3"
-                  onClick={() => sendMessage('¿Cómo creo un nuevo proyecto?')}
-                >
-                  <div className="text-left">
-                    <div className="font-medium text-sm">Crear Proyectos</div>
-                    <div className="text-xs text-muted-foreground">Guía paso a paso</div>
-                  </div>
-                </Button>
-                
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start h-auto p-3"
-                  onClick={() => sendMessage('¿Cómo funciona el cálculo de ROI?')}
-                >
-                  <div className="text-left">
-                    <div className="font-medium text-sm">Cálculo ROI</div>
-                    <div className="text-xs text-muted-foreground">Métricas financieras</div>
-                  </div>
-                </Button>
-                
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start h-auto p-3"
-                  onClick={() => sendMessage('¿Cómo asigno tareas al equipo?')}
-                >
-                  <div className="text-left">
-                    <div className="font-medium text-sm">Gestión de Tareas</div>
-                    <div className="text-xs text-muted-foreground">Asignaciones y seguimiento</div>
-                  </div>
-                </Button>
-                
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start h-auto p-3"
-                  onClick={() => sendMessage('¿Qué permisos tiene cada rol de usuario?')}
-                >
-                  <div className="text-left">
-                    <div className="font-medium text-sm">Roles y Permisos</div>
-                    <div className="text-xs text-muted-foreground">Gestión de usuarios</div>
-                  </div>
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Estado del Chat</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                  <span className="text-sm text-muted-foreground">
-                    Asistente disponible
-                  </span>
-                </div>
-                <Separator className="my-3" />
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                    <span className="text-xs text-muted-foreground">
-                      Webhook n8n integrado
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    ID de conversación: <code className="text-xs bg-muted px-1 rounded">{conversationId}</code>
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
+        <div className="h-[calc(100vh-200px)]">
           {/* Chat Interface */}
-          <div className="lg:col-span-3">
+          <div>
             <Card className="h-full flex flex-col">
               <CardHeader className="flex-shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                    <Bot className="w-5 h-5 text-primary" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                      <Bot className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">Asistente AdvantX</CardTitle>
+                      <CardDescription>
+                        Pregúntame cualquier duda que tengas
+                      </CardDescription>
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle className="text-lg">Asistente AdvantX</CardTitle>
-                    <CardDescription>
-                      Pregúntame sobre proyectos, tareas, ROI y más
-                    </CardDescription>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    <span className="text-xs text-muted-foreground">
+                      Asistente disponible
+                    </span>
                   </div>
                 </div>
               </CardHeader>
@@ -469,11 +394,21 @@ export default function Help() {
                     </Button>
                   </form>
                   <p className="text-xs text-muted-foreground mt-2 text-center">
-                    Presiona Enter para enviar • Shift+Enter para nueva línea
+                    Presiona Enter para enviar • Shift+Enter para nueva línea • Enviar un mensaje a la vez
                   </p>
                 </div>
               </CardContent>
             </Card>
+            
+            {/* Powered by text */}
+            <div className="mt-4 text-center">
+              <p className="text-sm text-muted-foreground">
+                Powered by{' '}
+                <span className="bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent font-semibold">
+                  AdvantX Technology
+                </span>
+              </p>
+            </div>
           </div>
         </div>
       </div>
