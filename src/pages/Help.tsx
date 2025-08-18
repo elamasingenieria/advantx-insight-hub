@@ -89,11 +89,32 @@ export default function Help() {
         throw new Error(`Webhook failed: ${response.status} ${response.statusText}`);
       }
 
-      console.log('Webhook sent successfully');
-      return true;
+      // Get the response text from webhook
+      const responseText = await response.text();
+      console.log('Webhook response received:', responseText);
+
+      // Try to parse JSON response
+      try {
+        const jsonResponse = JSON.parse(responseText);
+        console.log('Parsed webhook response:', jsonResponse);
+        
+        // Extract output field from response
+        if (Array.isArray(jsonResponse) && jsonResponse.length > 0 && jsonResponse[0].output) {
+          return { success: true, message: jsonResponse[0].output };
+        } else if (jsonResponse.output) {
+          return { success: true, message: jsonResponse.output };
+        } else {
+          console.warn('No output field found in webhook response:', jsonResponse);
+          return { success: false, message: 'No se recibió una respuesta válida del webhook.' };
+        }
+      } catch (parseError) {
+        console.error('Error parsing webhook response JSON:', parseError);
+        // If it's not JSON, use the raw text as response
+        return { success: true, message: responseText };
+      }
     } catch (error) {
       console.error('Error sending to webhook:', error);
-      return false;
+      return { success: false, message: 'Error al conectar con el webhook.' };
     }
   };
 
@@ -114,35 +135,40 @@ export default function Help() {
     setIsTyping(true);
 
     try {
-      // Send message to n8n webhook
-      const webhookSuccess = await sendToWebhook(content);
+      // Send message to n8n webhook and get response
+      const webhookResponse = await sendToWebhook(content);
       
       // Update user message status based on webhook result
       setMessages(prev => 
         prev.map(msg => 
           msg.id === userMessage.id 
-            ? { ...msg, status: webhookSuccess ? 'sent' : 'error' }
+            ? { ...msg, status: webhookResponse.success ? 'sent' : 'error' }
             : msg
         )
       );
 
-      if (!webhookSuccess) {
-        console.warn('Webhook failed, but continuing with bot response');
+      // Use webhook response or fallback to local response
+      let botResponseContent: string;
+      
+      if (webhookResponse.success && webhookResponse.message) {
+        botResponseContent = webhookResponse.message;
+        console.log('Using webhook response:', botResponseContent);
+      } else {
+        console.warn('Webhook failed or no message, using fallback response');
+        botResponseContent = getBotResponse(content);
       }
 
-      // Simulate bot response (this can be enhanced later to use webhook response)
-      setTimeout(() => {
-        const botResponse: Message = {
-          id: generateMessageId(),
-          content: getBotResponse(content),
-          sender: 'bot',
-          timestamp: new Date(),
-        };
+      // Add bot response message
+      const botResponse: Message = {
+        id: generateMessageId(),
+        content: botResponseContent,
+        sender: 'bot',
+        timestamp: new Date(),
+      };
 
-        setMessages(prev => [...prev, botResponse]);
-        setIsTyping(false);
-        setIsSending(false);
-      }, 1500);
+      setMessages(prev => [...prev, botResponse]);
+      setIsTyping(false);
+      setIsSending(false);
 
     } catch (error) {
       console.error('Error sending message:', error);
