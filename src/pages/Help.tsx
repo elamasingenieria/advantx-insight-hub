@@ -14,7 +14,6 @@ import {
   HelpCircle,
   MessageCircle,
   Loader2,
-  ExternalLink,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -265,14 +264,6 @@ export default function Help() {
             </div>
             
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => window.open('https://clientes.advantx.co/help', '_blank')}
-              >
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Ayuda Externa
-              </Button>
               {profile && (
                 <div className="text-right">
                   <p className="text-sm font-medium">{profile.full_name}</p>
