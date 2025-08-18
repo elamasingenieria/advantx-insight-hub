@@ -1,18 +1,23 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProjects, useProjectStats } from '@/hooks/useProjects';
+import { useProfiles } from '@/hooks/useProfiles';
 import { useTasks } from '@/hooks/useTasks';
+import { useDashboard } from '@/hooks/useDashboard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
 import { ROISummaryCard } from '@/components/ROISummaryCard';
 import { ProgressTracker } from '@/components/ProgressTracker';
 import { Link } from 'react-router-dom';
 import { syncMissingProfiles } from '@/utils/profileSync';
+import { ProjectAssignmentForm } from '@/components/admin/ProjectAssignmentForm';
 import { useToast } from '@/hooks/use-toast';
 import { SettingsDropdown } from '@/components/SettingsDropdown';
 import { PaymentHistory } from '@/components/PaymentHistory';
+import { ClientProjectDashboard } from '@/components/ClientProjectDashboard';
 import { 
   User, 
   Building, 
@@ -84,44 +89,76 @@ export function Dashboard() {
   if (!profile && user) {
     console.log('Dashboard - no profile found for authenticated user');
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto">
-          <div className="w-16 h-16 bg-warning/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <User className="w-8 h-8 text-warning" />
+      <div className="min-h-screen bg-background">
+        {/* Header with Sign Out */}
+        <header className="border-b bg-card shadow-sm">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold">AdvantX Hub</h1>
+                  <p className="text-sm text-muted-foreground">{formatTime(currentTime)}</p>
+                </div>
+              </div>
+              <Button 
+                variant="ghost"
+                onClick={signOut}
+                size="sm"
+              >
+                Sign Out
+              </Button>
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-2">Profile Setup Required</h1>
-          <p className="text-muted-foreground mb-6">
-            Your account is authenticated, but we need to set up your profile to access the dashboard.
-          </p>
-                    <div className="space-y-3">
-            <Button 
-              onClick={handleCreateProfile}
-              disabled={isCreatingProfile}
-              className="w-full"
-            >
-              {isCreatingProfile && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />}
-              {isCreatingProfile ? 'Setting up profile...' : 'Set up Profile'}
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={debugProfile}
-              className="w-full"
-            >
-              🔍 Debug Profile Issue
-            </Button>
-            <Button 
-              variant="outline"
-            onClick={signOut}
-              className="w-full"
-          >
-            Sign Out
-            </Button>
-          </div>
-          <div className="mt-6 p-4 bg-card rounded-lg border text-left">
-            <h3 className="font-medium mb-2">Debug Information:</h3>
-            <p className="text-sm text-muted-foreground">User ID: {user?.id}</p>
-            <p className="text-sm text-muted-foreground">Email: {user?.email}</p>
-            <p className="text-sm text-muted-foreground">Profile Status: Missing</p>
+        </header>
+
+        {/* Main Content */}
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-md mx-auto">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-center mb-4">
+                  <div className="w-16 h-16 bg-warning/10 rounded-full flex items-center justify-center">
+                    <User className="w-8 h-8 text-warning" />
+                  </div>
+                </div>
+                <CardTitle className="text-2xl text-center">Profile Setup Required</CardTitle>
+                <CardDescription className="text-center">
+                  Your account is authenticated, but we need to set up your profile to access the dashboard.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button 
+                  onClick={handleCreateProfile}
+                  disabled={isCreatingProfile}
+                  className="w-full"
+                >
+                  {isCreatingProfile && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />}
+                  {isCreatingProfile ? 'Setting up profile...' : 'Set up Profile'}
+                </Button>
+
+                <Button 
+                  variant="outline"
+                  onClick={debugProfile}
+                  className="w-full"
+                >
+                  🔍 Debug Profile Issue
+                </Button>
+
+                <Separator className="my-4" />
+
+                <div className="rounded-lg bg-muted p-4 space-y-2">
+                  <h3 className="font-medium text-sm">Debug Information</h3>
+                  <div className="space-y-1 text-sm text-muted-foreground">
+                    <p>User ID: {user?.id}</p>
+                    <p>Email: {user?.email}</p>
+                    <p>Profile Status: Missing</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
@@ -133,14 +170,14 @@ export function Dashboard() {
     
     switch (profile.role) {
       case 'client':
-        return <ClientDashboard />;
+        return <ClientProjectDashboard />;
       case 'team_member':
         return <TeamDashboard />;
       case 'admin':
         return <AdminDashboard />;
       default:
         console.log('Unknown role, defaulting to client dashboard');
-        return <ClientDashboard />;
+        return <ClientProjectDashboard />;
     }
   };
 
@@ -198,10 +235,11 @@ export function Dashboard() {
 }
 
 function ClientDashboard() {
-  const { projects, loading: projectsLoading } = useProjects({ status: 'active', includePhases: true });
+  const { projects, loading: projectsLoading } = useProjects({ includePhases: true });
   const { stats, loading: statsLoading } = useProjectStats();
   
-  const activeProject = projects.length > 0 ? projects[0] : null;
+  // Client should only have ONE assigned project
+  const assignedProject = projects.length > 0 ? projects[0] : null;
   const upcomingDeadlines = projects
     .flatMap(project => 
       project.phases?.filter(phase => 
@@ -227,14 +265,46 @@ function ClientDashboard() {
     );
   }
 
+  // Show message if no project is assigned
+  if (!assignedProject && !projectsLoading) {
+    return (
+      <div className="space-y-8">
+        <div className="text-center space-y-4">
+          <h2 className="text-3xl font-bold">Welcome to Your Project Hub</h2>
+          <div className="max-w-md mx-auto">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center space-y-4">
+                  <FolderOpen className="w-12 h-12 text-muted-foreground mx-auto" />
+                  <div>
+                    <h3 className="text-lg font-semibold">No Project Assigned</h3>
+                    <p className="text-sm text-muted-foreground">
+                      You don't have an assigned project yet. Please contact your project manager.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
       <div className="text-center space-y-2">
         <h2 className="text-3xl font-bold">Welcome to Your Project Hub</h2>
         <p className="text-muted-foreground max-w-2xl mx-auto">
-          Track your project progress, see your ROI, and access all project resources in one place.
+          Track your project progress, see your ROI, and access all project resources.
         </p>
+        {assignedProject && (
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
+            <div className="w-2 h-2 bg-current rounded-full" />
+            Project: {assignedProject.name}
+          </div>
+        )}
       </div>
 
       {/* Stats Overview */}
@@ -699,6 +769,8 @@ function TeamDashboard() {
 
 function AdminDashboard() {
   const { toast } = useToast();
+  const { projects, loading: projectsLoading, refetch: refetchProjects } = useProjects({ includePhases: true });
+  const { profiles, loading: profilesLoading } = useProfiles({ includeProjects: true });
   const [isSyncing, setIsSyncing] = useState(false);
 
   const handleSyncProfiles = async () => {
@@ -727,6 +799,10 @@ function AdminDashboard() {
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  const handleProjectCreated = () => {
+    refetchProjects();
   };
 
   return (

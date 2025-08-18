@@ -15,14 +15,14 @@ export interface Project {
   annual_roi_percentage?: number;
   progress_percentage: number;
   drive_root_folder_id?: string;
+  profile_id: string;
   created_at: string;
   updated_at: string;
-  client: {
+  profile?: {
     id: string;
-    name: string;
-    company: string;
-    contact_email: string;
-    phone?: string;
+    full_name: string;
+    email: string;
+    company?: string;
   };
   phases?: Phase[];
 }
@@ -42,7 +42,7 @@ export interface Phase {
 }
 
 interface UseProjectsOptions {
-  clientId?: string;
+  profileId?: string;
   status?: Project['status'];
   includePhases?: boolean;
 }
@@ -63,18 +63,17 @@ export function useProjects(options: UseProjectsOptions = {}) {
         .from('projects')
         .select(`
           *,
-          client:clients!inner(id, name, company, contact_email, phone, profile_id)
+          profile:profiles(id, full_name, email, company)
           ${options.includePhases ? ', phases(*)' : ''}
         `)
         .order('created_at', { ascending: false });
 
-      // Filter by client if user is a client
+      // Filter by profile if user is a client - only show their assigned project
       if (profile?.role === 'client') {
-        // Get projects where the client's profile_id matches
-        query = query.eq('client.profile_id', profile.id);
-      } else if (options.clientId) {
-        // Admin/team member filtering by specific client
-        query = query.eq('client_id', options.clientId);
+        query = query.eq('profile_id', profile.id);
+      } else if (options.profileId) {
+        // Admin/team member filtering by specific profile
+        query = query.eq('profile_id', options.profileId);
       }
 
       // Filter by status if specified
@@ -105,7 +104,7 @@ export function useProjects(options: UseProjectsOptions = {}) {
     if (profile) {
       fetchProjects();
     }
-  }, [profile, options.clientId, options.status, options.includePhases]);
+  }, [profile, options.profileId, options.status, options.includePhases]);
 
   const refetch = () => {
     fetchProjects();
@@ -140,14 +139,14 @@ export function useProject(projectId: string, includePhases = true) {
         .from('projects')
         .select(`
           *,
-          client:clients!inner(id, name, company, contact_email, phone, profile_id)
+          profile:profiles(id, full_name, email, company)
           ${includePhases ? ', phases(*)' : ''}
         `)
         .eq('id', projectId);
 
-      // Filter by client access if user is a client
+      // Filter by profile access if user is a client - only show their assigned project
       if (profile?.role === 'client') {
-        query = query.eq('client.profile_id', profile.id);
+        query = query.eq('profile_id', profile.id);
       }
 
       const { data, error } = await query.single();
@@ -207,11 +206,9 @@ export function useProjectStats() {
         .from('projects')
         .select('status, monthly_savings, annual_roi_percentage');
 
-      // Filter by client if user is a client
+      // Filter by profile if user is a client - only show their assigned project stats
       if (profile?.role === 'client') {
-        projectsQuery = projectsQuery
-          .select('status, monthly_savings, annual_roi_percentage, client:clients!inner(profile_id)')
-          .eq('client.profile_id', profile.id);
+        projectsQuery = projectsQuery.eq('profile_id', profile.id);
       }
 
       const { data: projects, error } = await projectsQuery;
