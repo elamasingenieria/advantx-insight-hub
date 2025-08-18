@@ -28,6 +28,10 @@ interface Message {
 
 export default function Help() {
   const { user, profile } = useAuth();
+  const [conversationId] = useState(() => {
+    // Generate unique conversation ID when component mounts
+    return `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  });
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -54,6 +58,45 @@ export default function Help() {
     return Date.now().toString() + Math.random().toString(36).substr(2, 9);
   };
 
+  const sendToWebhook = async (message: string) => {
+    try {
+      const webhookUrl = 'https://devwebhookn8n.ezequiellamas.com/webhook/97b7304f-badd-4689-87d8-cbf983144850';
+      
+      const payload = {
+        conversationId: conversationId,
+        message: message,
+        userId: user?.id,
+        userEmail: user?.email,
+        userProfile: {
+          id: profile?.id,
+          fullName: profile?.full_name,
+          role: profile?.role,
+        },
+        timestamp: new Date().toISOString(),
+      };
+
+      console.log('Sending to webhook:', { url: webhookUrl, payload });
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Webhook failed: ${response.status} ${response.statusText}`);
+      }
+
+      console.log('Webhook sent successfully');
+      return true;
+    } catch (error) {
+      console.error('Error sending to webhook:', error);
+      return false;
+    }
+  };
+
   const sendMessage = async (content: string) => {
     if (!content.trim() || isSending) return;
 
@@ -71,30 +114,23 @@ export default function Help() {
     setIsTyping(true);
 
     try {
-      // Update user message status to sent
+      // Send message to n8n webhook
+      const webhookSuccess = await sendToWebhook(content);
+      
+      // Update user message status based on webhook result
       setMessages(prev => 
         prev.map(msg => 
           msg.id === userMessage.id 
-            ? { ...msg, status: 'sent' }
+            ? { ...msg, status: webhookSuccess ? 'sent' : 'error' }
             : msg
         )
       );
 
-      // TODO: Future n8n webhook integration
-      // const response = await fetch('/api/chat-webhook', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify({
-      //     message: content,
-      //     userId: user?.id,
-      //     userEmail: user?.email,
-      //     userProfile: profile,
-      //   }),
-      // });
+      if (!webhookSuccess) {
+        console.warn('Webhook failed, but continuing with bot response');
+      }
 
-      // Simulate response for now
+      // Simulate bot response (this can be enhanced later to use webhook response)
       setTimeout(() => {
         const botResponse: Message = {
           id: generateMessageId(),
@@ -294,9 +330,17 @@ export default function Help() {
                   </span>
                 </div>
                 <Separator className="my-3" />
-                <p className="text-xs text-muted-foreground">
-                  Este chat se conectará a n8n en el futuro para respuestas más avanzadas.
-                </p>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                    <span className="text-xs text-muted-foreground">
+                      Webhook n8n integrado
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    ID de conversación: <code className="text-xs bg-muted px-1 rounded">{conversationId}</code>
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </div>

@@ -1,0 +1,11 @@
+# Netlify redirects for SPA routing
+# This file handles client-side routing for React Router
+
+# Redirect all routes to index.html for SPA routing
+/*    /index.html   200
+
+# Optional: Redirect HTTP to HTTPS (if using custom domain)
+# http://clientes.advantx.co/*  https://clientes.advantx.co/:splat  301!
+
+# Optional: Handle specific API routes if needed
+# /api/*  https://your-api-url.com/api/:splat  200
