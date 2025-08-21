@@ -159,17 +159,16 @@ export function usePhases(projectId?: string) {
 
   const reorderPhases = async (reorderedPhases: Phase[]): Promise<boolean> => {
     try {
-      // Update order_index for each phase
-      const updates = reorderedPhases.map((phase, index) => ({
-        id: phase.id,
-        order_index: index + 1,
-      }));
+      // Update order_index for each phase individually
+      for (let i = 0; i < reorderedPhases.length; i++) {
+        const phase = reorderedPhases[i];
+        const { error } = await supabase
+          .from('phases')
+          .update({ order_index: i + 1 })
+          .eq('id', phase.id);
 
-      const { error } = await supabase
-        .from('phases')
-        .upsert(updates, { onConflict: 'id' });
-
-      if (error) throw error;
+        if (error) throw error;
+      }
 
       setPhases(reorderedPhases);
 

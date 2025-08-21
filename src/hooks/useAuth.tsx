@@ -168,22 +168,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Current user email:', session.user.email);
       console.log('Current session:', session);
       
-      // Call the debug function we created in the migration
+      // Call the debug function - using direct query instead of RPC
       const { data, error } = await supabase
-        .rpc('debug_user_profile', { check_user_id: session.user.id });
+        .from('profiles')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .single();
 
       if (error) {
         console.error('Debug function error:', error);
       } else {
         console.log('Debug results:', data);
-        if (data && data.length > 0) {
-          const result = data[0];
-          console.log('User exists in auth.users:', result.user_exists);
-          console.log('Profile exists in profiles:', result.profile_exists);
-          console.log('User email:', result.user_email);
-          console.log('Profile email:', result.profile_email);
-          console.log('Profile role:', result.profile_role);
-          console.log('Current auth.uid():', result.auth_uid);
+        if (data) {
+          console.log('Profile found:', data);
+          setProfile(data);
         }
       }
       
@@ -285,7 +283,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
 
-  const signOut = async () => {
+  const signOut = async (): Promise<void> => {
     try {
       console.log('useAuth.signOut: Starting sign out process...');
       setLoading(true);
@@ -310,7 +308,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       console.log('useAuth.signOut: Sign out completed successfully');
-      return { success: true };
     } catch (error: any) {
       console.error('Error signing out:', error);
       toast({

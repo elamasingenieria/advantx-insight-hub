@@ -91,11 +91,21 @@ export function ClientSelector({ selectedClientId, onClientSelect, onError }: Cl
     try {
       setCreating(true);
       
+      // Get current user profile for linking clients
+      const { data: currentProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      if (profileError) throw profileError;
+
       const clientData = {
         name: newClient.name.trim(),
         company: newClient.company.trim(),
         contact_email: newClient.contact_email.trim().toLowerCase(),
         phone: newClient.phone.trim() || null,
+        profile_id: currentProfile.id
       };
 
       const { data, error } = await supabase

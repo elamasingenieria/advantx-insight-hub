@@ -63,18 +63,17 @@ export function useProjects(options: UseProjectsOptions = {}) {
         .from('projects')
         .select(`
           *,
-          client:clients!inner(id, name, company, contact_email, phone, profile_id)
-          ${options.includePhases ? ', phases(*)' : ''}
+          client:clients!inner(*)
         `)
         .order('created_at', { ascending: false });
 
       // Filter by client if user is a client
       if (profile?.role === 'client') {
         // Get projects where the client's profile_id matches
-        query = query.eq('client.profile_id', profile.id);
+        query = query.eq('clients.profile_id', profile.id);
       } else if (options.clientId) {
         // Admin/team member filtering by specific client
-        query = query.eq('client_id', options.clientId);
+        query = query.eq('clients.id', options.clientId);
       }
 
       // Filter by status if specified
@@ -86,7 +85,13 @@ export function useProjects(options: UseProjectsOptions = {}) {
 
       if (error) throw error;
 
-      setProjects(data || []);
+      // Transform the data to match expected format
+      const transformedData = data?.map((project: any) => ({
+        ...project,
+        client: project.client
+      })) || [];
+
+      setProjects(transformedData);
     } catch (error: any) {
       console.error('Error fetching projects:', error);
       const errorMessage = error.message || 'Failed to load projects';
@@ -140,21 +145,26 @@ export function useProject(projectId: string, includePhases = true) {
         .from('projects')
         .select(`
           *,
-          client:clients!inner(id, name, company, contact_email, phone, profile_id)
-          ${includePhases ? ', phases(*)' : ''}
+          client:clients!inner(*)
         `)
         .eq('id', projectId);
 
       // Filter by client access if user is a client
       if (profile?.role === 'client') {
-        query = query.eq('client.profile_id', profile.id);
+        query = query.eq('clients.profile_id', profile.id);
       }
 
-      const { data, error } = await query.single();
+      const { data, error } = await query.maybeSingle();
 
       if (error) throw error;
 
-      setProject(data);
+      // Transform the data to match expected format
+      const transformedData = data ? {
+        ...data,
+        client: data.client
+      } : null;
+
+      setProject(transformedData);
     } catch (error: any) {
       console.error('Error fetching project:', error);
       const errorMessage = error.message || 'Failed to load project';
@@ -207,11 +217,17 @@ export function useProjectStats() {
         .from('projects')
         .select('status, monthly_savings, annual_roi_percentage');
 
-      // Filter by client if user is a client
+      // Filter by client if user is a client  
       if (profile?.role === 'client') {
-        projectsQuery = projectsQuery
-          .select('status, monthly_savings, annual_roi_percentage, client:clients!inner(profile_id)')
-          .eq('client.profile_id', profile.id);
+        projectsQuery = supabase
+          .from('projects')
+          .select(`
+            status, 
+            monthly_savings, 
+            annual_roi_percentage,
+            client:clients!inner(profile_id)
+          `)
+          .eq('clients.profile_id', profile.id);
       }
 
       const { data: projects, error } = await projectsQuery;

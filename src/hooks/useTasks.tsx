@@ -80,13 +80,22 @@ export function useTasks(options: UseTasksOptions = {}) {
 
       // Filter by project if specified (requires joining with phases)
       if (options.projectId && !options.phaseId) {
-        query = query
-          .select(`
-            *,
-            assignee:profiles(id, full_name, email, avatar_url),
-            phase:phases!inner(project_id)
-          `)
-          .eq('phases.project_id', options.projectId);
+        const { data: phases, error: phasesError } = await supabase
+          .from('phases')
+          .select('id')
+          .eq('project_id', options.projectId);
+
+        if (phasesError) throw phasesError;
+
+        const phaseIds = phases?.map(p => p.id) || [];
+        if (phaseIds.length > 0) {
+          query = query.in('phase_id', phaseIds);
+        } else {
+          // No phases for this project, return empty result
+          setTasks([]);
+          setLoading(false);
+          return;
+        }
       }
 
       // Filter by assignee if specified
@@ -157,10 +166,10 @@ export function useTasks(options: UseTasksOptions = {}) {
   const updateTask = async (taskId: string, updates: UpdateTaskData): Promise<boolean> => {
     try {
       // If marking as completed, set completed_at timestamp
-      const updateData = { ...updates };
-      if (updates.status === 'completed' && !updateData.completed_at) {
+      const updateData: any = { ...updates };
+      if (updates.status === 'completed') {
         updateData.completed_at = new Date().toISOString();
-      } else if (updates.status !== 'completed') {
+      } else if (updates.status !== undefined && updates.status !== 'completed') {
         updateData.completed_at = null;
       }
 

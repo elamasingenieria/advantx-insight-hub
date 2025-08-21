@@ -64,7 +64,13 @@ export function usePayments(options: UsePaymentsOptions = {}) {
         query = query.eq('status', options.status);
       }
 
-      const { data, error: fetchError } = await query;
+      const { data, error: fetchError } = await supabase
+        .from('payment_schedules')
+        .select(`
+          *,
+          project:projects(*)
+        `)
+        .order('due_date', { ascending: false });
 
       if (fetchError) {
         console.error('Error fetching payments:', fetchError);
@@ -72,7 +78,7 @@ export function usePayments(options: UsePaymentsOptions = {}) {
       }
 
       console.log('Fetched payments:', data);
-      setPayments(data || []);
+      setPayments((data as PaymentSchedule[]) || []);
     } catch (err: any) {
       console.error('Error in fetchPayments:', err);
       setError(err.message || 'Failed to fetch payments');
