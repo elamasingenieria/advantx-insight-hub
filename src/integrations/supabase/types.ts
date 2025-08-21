@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      clients: {
+        Row: {
+          company: string
+          contact_email: string
+          created_at: string
+          id: string
+          name: string
+          phone: string | null
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          company: string
+          contact_email: string
+          created_at?: string
+          id?: string
+          name: string
+          phone?: string | null
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          company?: string
+          contact_email?: string
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dashboard_configs: {
         Row: {
           branding: Json | null
