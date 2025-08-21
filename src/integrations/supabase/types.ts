@@ -14,47 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      clients: {
-        Row: {
-          company: string
-          contact_email: string
-          created_at: string
-          id: string
-          name: string
-          phone: string | null
-          profile_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          company: string
-          contact_email: string
-          created_at?: string
-          id?: string
-          name: string
-          phone?: string | null
-          profile_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          company?: string
-          contact_email?: string
-          created_at?: string
-          id?: string
-          name?: string
-          phone?: string | null
-          profile_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "clients_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       dashboard_configs: {
         Row: {
           branding: Json | null
@@ -89,13 +48,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "dashboard_configs_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: true
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_dashboard_configs_project"
             columns: ["project_id"]
             isOneToOne: true
             referencedRelation: "projects"
@@ -138,13 +90,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "fk_payment_schedules_project"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "payment_schedules_project_id_fkey"
             columns: ["project_id"]
@@ -264,20 +209,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_project_members_profile"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_project_members_project"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "project_members_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
@@ -337,7 +268,6 @@ export type Database = {
       projects: {
         Row: {
           annual_roi_percentage: number | null
-          client_id: string
           created_at: string
           description: string | null
           drive_root_folder_id: string | null
@@ -345,6 +275,7 @@ export type Database = {
           id: string
           monthly_savings: number | null
           name: string
+          profile_id: string | null
           progress_percentage: number | null
           start_date: string | null
           status: Database["public"]["Enums"]["project_status"]
@@ -353,7 +284,6 @@ export type Database = {
         }
         Insert: {
           annual_roi_percentage?: number | null
-          client_id: string
           created_at?: string
           description?: string | null
           drive_root_folder_id?: string | null
@@ -361,6 +291,7 @@ export type Database = {
           id?: string
           monthly_savings?: number | null
           name: string
+          profile_id?: string | null
           progress_percentage?: number | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
@@ -369,7 +300,6 @@ export type Database = {
         }
         Update: {
           annual_roi_percentage?: number | null
-          client_id?: string
           created_at?: string
           description?: string | null
           drive_root_folder_id?: string | null
@@ -377,6 +307,7 @@ export type Database = {
           id?: string
           monthly_savings?: number | null
           name?: string
+          profile_id?: string | null
           progress_percentage?: number | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
@@ -385,10 +316,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "projects_client_id_fkey"
-            columns: ["client_id"]
+            foreignKeyName: "projects_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
-            referencedRelation: "clients"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -465,9 +396,25 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      get_user_projects: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          project_description: string
+          project_id: string
+          project_name: string
+          project_status: Database["public"]["Enums"]["project_status"]
+          user_role: string
+        }[]
+      }
       is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      sync_missing_profiles: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          synced_count: number
+        }[]
       }
     }
     Enums: {
